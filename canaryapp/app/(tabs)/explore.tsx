@@ -2,6 +2,7 @@ import { StyleSheet, View, ScrollView, useColorScheme } from 'react-native';
 import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, CanaryColors } from '@/constants/theme';
+import { FloatingScanner } from '@/components/floating-scanner';
 
 export default function InfoScreen() {
   const colorScheme = useColorScheme();
@@ -91,6 +92,9 @@ export default function InfoScreen() {
           ))}
         </View>
       </View>
+
+      {/* Floating Scanner Settings */}
+      <FloatingScanner />
 
       {/* Mission Statement */}
       <View style={[styles.missionCard, { backgroundColor: CanaryColors.primary + '20' }]}>

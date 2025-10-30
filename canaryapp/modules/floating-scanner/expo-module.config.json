@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["FloatingScannerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.floatingscanner.FloatingScannerModule"]
+  }
+}
