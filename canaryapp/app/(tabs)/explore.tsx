@@ -2,11 +2,20 @@ import { StyleSheet, View, ScrollView, useColorScheme } from 'react-native';
 import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, CanaryColors } from '@/constants/theme';
-import { FloatingScanner } from '@/components/floating-scanner';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function InfoScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  const scamTypes = [
+    { icon: 'security', label: 'Phishing' },
+    { icon: 'payment', label: 'Payment Fraud' },
+    { icon: 'card-giftcard', label: 'Lottery Scams' },
+    { icon: 'favorite', label: 'Romance' },
+    { icon: 'support-agent', label: 'Tech Support' },
+    { icon: 'trending-up', label: 'Investment' },
+  ];
 
   return (
     <ScrollView
@@ -21,89 +30,103 @@ export default function InfoScreen() {
           contentFit="contain"
         />
         <ThemedText style={[styles.title, { color: colors.text }]}>
-          How Canary Works
-        </ThemedText>
-        <ThemedText style={[styles.tagline, { color: colors.icon }]}>
-          Your Always-Running Scam Detector
-        </ThemedText>
-      </View>
-
-      {/* Step 1 */}
-      <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
-        <View style={[styles.stepNumber, { backgroundColor: CanaryColors.primary }]}>
-          <ThemedText style={styles.stepNumberText}>1</ThemedText>
-        </View>
-        <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
-          Upload a Screenshot
-        </ThemedText>
-        <ThemedText style={[styles.stepDescription, { color: colors.icon }]}>
-          Take a screenshot of any suspicious message, email, or content you receive across any app or device.
-        </ThemedText>
-      </View>
-
-      {/* Step 2 */}
-      <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
-        <View style={[styles.stepNumber, { backgroundColor: CanaryColors.primary }]}>
-          <ThemedText style={styles.stepNumberText}>2</ThemedText>
-        </View>
-        <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
           AI Analysis
         </ThemedText>
-        <ThemedText style={[styles.stepDescription, { color: colors.icon }]}>
-          Our advanced AI powered by Google Gemini analyzes the content for common scam patterns, phishing attempts, and fraudulent requests.
+        <ThemedText style={[styles.subtitle, { color: colors.icon }]}>
+          Powered by Google Gemini
         </ThemedText>
       </View>
 
-      {/* Step 3 */}
-      <View style={[styles.stepCard, { backgroundColor: colors.card }]}>
-        <View style={[styles.stepNumber, { backgroundColor: CanaryColors.primary }]}>
-          <ThemedText style={styles.stepNumberText}>3</ThemedText>
+      {/* How It Works - Compact */}
+      <View style={styles.stepsContainer}>
+        {/* Step 1 */}
+        <View style={styles.stepRow}>
+          <View style={[styles.iconCircle, { backgroundColor: CanaryColors.primary }]}>
+            <MaterialIcons name="upload-file" size={24} color="#1C1C1C" />
+          </View>
+          <View style={styles.stepContent}>
+            <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
+              Upload Screenshot
+            </ThemedText>
+            <ThemedText style={[styles.stepDesc, { color: colors.icon }]}>
+              Scan any suspicious content
+            </ThemedText>
+          </View>
         </View>
-        <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
-          Get Instant Results
-        </ThemedText>
-        <ThemedText style={[styles.stepDescription, { color: colors.icon }]}>
-          Receive a detailed analysis with confidence scores, red flags, and actionable safety recommendations within seconds.
-        </ThemedText>
+
+        {/* Connector */}
+        <View style={[styles.connector, { backgroundColor: colors.border }]} />
+
+        {/* Step 2 */}
+        <View style={styles.stepRow}>
+          <View style={[styles.iconCircle, { backgroundColor: CanaryColors.primary }]}>
+            <MaterialIcons name="psychology" size={24} color="#1C1C1C" />
+          </View>
+          <View style={styles.stepContent}>
+            <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
+              AI Analysis
+            </ThemedText>
+            <ThemedText style={[styles.stepDesc, { color: colors.icon }]}>
+              Detect scam patterns instantly
+            </ThemedText>
+          </View>
+        </View>
+
+        {/* Connector */}
+        <View style={[styles.connector, { backgroundColor: colors.border }]} />
+
+        {/* Step 3 */}
+        <View style={styles.stepRow}>
+          <View style={[styles.iconCircle, { backgroundColor: CanaryColors.primary }]}>
+            <MaterialIcons name="verified-user" size={24} color="#1C1C1C" />
+          </View>
+          <View style={styles.stepContent}>
+            <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
+              Get Results
+            </ThemedText>
+            <ThemedText style={[styles.stepDesc, { color: colors.icon }]}>
+              Safety scores & recommendations
+            </ThemedText>
+          </View>
+        </View>
       </View>
 
-      {/* Features Section */}
-      <View style={styles.featuresSection}>
+      {/* What We Detect - Grid */}
+      <View style={styles.detectSection}>
         <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
           What We Detect
         </ThemedText>
         
-        <View style={styles.featuresList}>
-          {[
-            'Phishing & Fake Login Pages',
-            'Fraudulent Payment Requests',
-            'Prize & Lottery Scams',
-            'Romance Scams',
-            'Tech Support Scams',
-            'Investment & Crypto Scams',
-            'Social Engineering Attempts',
-          ].map((feature, index) => (
-            <View key={index} style={styles.featureItem}>
-              <View style={[styles.featureBullet, { backgroundColor: CanaryColors.trustBlue }]} />
-              <ThemedText style={[styles.featureText, { color: colors.text }]}>
-                {feature}
+        <View style={styles.scamGrid}>
+          {scamTypes.map((item, index) => (
+            <View 
+              key={index} 
+              style={[styles.scamCard, { backgroundColor: colors.card }]}
+            >
+              <MaterialIcons 
+                name={item.icon as any} 
+                size={28} 
+                color={CanaryColors.trustBlue} 
+              />
+              <ThemedText style={[styles.scamLabel, { color: colors.text }]}>
+                {item.label}
               </ThemedText>
             </View>
           ))}
         </View>
       </View>
 
-      {/* Floating Scanner Settings */}
-      <FloatingScanner />
-
-      {/* Mission Statement */}
-      <View style={[styles.missionCard, { backgroundColor: CanaryColors.primary + '20' }]}>
-        <ThemedText style={[styles.missionTitle, { color: colors.text }]}>
-          Our Mission
-        </ThemedText>
-        <ThemedText style={[styles.missionText, { color: colors.text }]}>
-          To protect you and your family from scams across all apps and devices with AI-powered detection that's always watching out for you.
-        </ThemedText>
+      {/* Mission - Simplified */}
+      <View style={[styles.missionBanner, { backgroundColor: CanaryColors.primary }]}>
+        <MaterialIcons name="shield" size={32} color="#1C1C1C" />
+        <View style={styles.missionText}>
+          <ThemedText style={styles.missionTitle}>
+            Always Protecting You
+          </ThemedText>
+          <ThemedText style={styles.missionSubtitle}>
+            AI-powered scam detection for all your apps
+          </ThemedText>
+        </View>
       </View>
     </ScrollView>
   );
@@ -120,88 +143,101 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
+    width: 80,
+    height: 80,
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: 'center',
   },
-  tagline: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  stepCard: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 16,
-  },
-  stepNumber: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  stepNumberText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1C1C1C',
-  },
-  stepTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  stepDescription: {
+  subtitle: {
     fontSize: 15,
-    lineHeight: 22,
+    textAlign: 'center',
   },
-  featuresSection: {
-    marginTop: 24,
-    marginBottom: 24,
+  stepsContainer: {
+    marginBottom: 32,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  featuresList: {
-    gap: 12,
-  },
-  featureItem: {
+  stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  featureBullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  featureText: {
-    fontSize: 15,
+  stepContent: {
     flex: 1,
+    marginLeft: 16,
   },
-  missionCard: {
-    padding: 24,
-    borderRadius: 16,
-    marginTop: 8,
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  missionTitle: {
+  stepDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  connector: {
+    width: 2,
+    height: 24,
+    marginLeft: 23,
+    marginVertical: 4,
+  },
+  detectSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  scamGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  scamCard: {
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+  },
+  scamLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  missionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 16,
+    gap: 16,
   },
   missionText: {
-    fontSize: 15,
-    lineHeight: 22,
+    flex: 1,
+  },
+  missionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1C1C1C',
+    marginBottom: 4,
+  },
+  missionSubtitle: {
+    fontSize: 13,
+    color: '#1C1C1C',
   },
 });

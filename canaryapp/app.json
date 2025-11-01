@@ -38,6 +38,14 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-chrome-192x192.png",
+          "color": "#E6F4FE",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {
