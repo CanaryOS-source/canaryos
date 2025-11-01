@@ -13,11 +13,15 @@ import {
 import * as Notifications from 'expo-notifications';
 import { Colors, CanaryColors } from '@/constants/theme';
 import { FloatingScanner } from '@/components/floating-scanner';
+import { useAuth } from '@/contexts/AuthContext';
+import { signOut, deleteAccount } from '@/services/firebase';
 
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { user, userData } = useAuth();
 
   useEffect(() => {
     checkNotificationPermissions();
@@ -83,6 +87,72 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            setIsLoggingOut(true);
+            try {
+              await signOut();
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            } finally {
+              setIsLoggingOut(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Confirm Deletion',
+              'Please type "DELETE" to confirm account deletion',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Confirm',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteAccount();
+                      Alert.alert('Account Deleted', 'Your account has been permanently deleted.');
+                    } catch (error: any) {
+                      let errorMessage = 'Failed to delete account. Please try again.';
+                      
+                      if (error.code === 'auth/requires-recent-login') {
+                        errorMessage = 'For security, please sign out and sign in again before deleting your account.';
+                      }
+                      
+                      Alert.alert('Error', errorMessage);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -140,6 +210,36 @@ export default function SettingsScreen() {
       {/* Floating Scanner Section */}
       <View style={styles.scannerSection}>
         <FloatingScanner />
+      </View>
+
+      {/* Account Section */}
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionHeader, { color: colors.text }]}>Account</Text>
+        
+        {userData && (
+          <View style={styles.accountInfo}>
+            <Text style={[styles.accountLabel, { color: colors.icon }]}>Email</Text>
+            <Text style={[styles.accountValue, { color: colors.text }]}>{userData.email}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: CanaryColors.trustBlue }]}
+          onPress={handleLogout}
+          disabled={isLoggingOut}
+        >
+          <Text style={styles.actionButtonText}>
+            {isLoggingOut ? 'Signing Out...' : 'Sign Out'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.dangerButton, { backgroundColor: CanaryColors.alertRed }]}
+          onPress={handleDeleteAccount}
+          disabled={isLoggingOut}
+        >
+          <Text style={styles.actionButtonText}>Delete Account</Text>
+        </TouchableOpacity>
       </View>
 
       {/* App Info */}
@@ -219,7 +319,34 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 20,
     fontWeight: '600',
+    marginBottom: 16,
+  },
+  accountInfo: {
+    marginBottom: 20,
+  },
+  accountLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  accountValue: {
+    fontSize: 16,
+  },
+  actionButton: {
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  dangerButton: {
+    marginTop: 8,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   appInfo: {
     marginTop: 20,

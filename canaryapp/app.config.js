@@ -13,6 +13,7 @@ module.exports = {
     },
     android: {
       package: 'com.canaryapp',
+      googleServicesFile: './google-services.json',
       permissions: [
         'android.permission.SYSTEM_ALERT_WINDOW',
         'android.permission.FOREGROUND_SERVICE',
@@ -47,6 +48,16 @@ module.exports = {
         },
       ],
       './plugins/withFloatingScanner.js',
+      '@react-native-firebase/app',
+      '@react-native-firebase/auth',
+      [
+        'expo-build-properties',
+        {
+          ios: {
+            useFrameworks: 'static',
+          },
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
