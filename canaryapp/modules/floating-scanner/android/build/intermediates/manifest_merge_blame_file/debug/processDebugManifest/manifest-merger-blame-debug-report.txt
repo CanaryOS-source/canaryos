@@ -1,0 +1,20 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="expo.modules.floatingscanner" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6    <!-- Permissions for floating overlay -->
+7    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+7-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:3:5-78
+7-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:3:22-75
+8    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+8-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:4:5-77
+8-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:4:22-74
+9    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+9-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:5:5-89
+9-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:5:22-86
+10    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+10-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:6:5-77
+10-->C:\Coding\canaryos\canaryapp\modules\floating-scanner\android\src\main\AndroidManifest.xml:6:22-74
+11
+12</manifest>

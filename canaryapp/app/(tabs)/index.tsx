@@ -8,14 +8,17 @@ import {
   ActivityIndicator,
   Alert,
   useColorScheme,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { analyzeImageForScam, ScamAnalysisResult } from '@/services/scamAnalyzer';
+import { analyzeImageForScam, analyzeTextForScam, ScamAnalysisResult } from '@/services/scamAnalyzer';
 import { Colors, CanaryColors } from '@/constants/theme';
 
 export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<ScamAnalysisResult | null>(null);
   const colorScheme = useColorScheme();
@@ -71,8 +74,34 @@ export default function HomeScreen() {
     }
   };
 
+  const analyzeSearch = async () => {
+    if (!searchQuery.trim()) {
+      Alert.alert('Input Required', 'Please enter a website URL or text to analyze.');
+      return;
+    }
+
+    Keyboard.dismiss();
+    setIsAnalyzing(true);
+    setSelectedImage(null);
+    setAnalysis(null);
+
+    try {
+      const result = await analyzeTextForScam(searchQuery.trim());
+      setAnalysis(result);
+    } catch (error) {
+      console.error('Search analysis error:', error);
+      Alert.alert(
+        'Analysis Failed',
+        'Failed to analyze the query. Please check your API key configuration and try again.'
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const resetAnalysis = () => {
     setSelectedImage(null);
+    setSearchQuery('');
     setAnalysis(null);
   };
 
@@ -94,15 +123,54 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      {/* Main Action Button */}
-      {!selectedImage && (
-        <TouchableOpacity
-          style={[styles.uploadButton, { backgroundColor: CanaryColors.primary }]}
-          onPress={pickImage}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.uploadButtonText}>Upload Screenshot</Text>
-        </TouchableOpacity>
+      {/* Main Action Buttons */}
+      {!selectedImage && !analysis && (
+        <>
+          <TouchableOpacity
+            style={[styles.uploadButton, { backgroundColor: CanaryColors.primary }]}
+            onPress={pickImage}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.uploadButtonText}>Upload Screenshot</Text>
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.icon }]}>OR</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          </View>
+
+          {/* Search Section */}
+          <View style={styles.searchSection}>
+            <Text style={[styles.searchTitle, { color: colors.text }]}>Search for Scams</Text>
+            <Text style={[styles.searchSubtitle, { color: colors.icon }]}>
+              Enter a website URL or keywords to check
+            </Text>
+            <TextInput
+              style={[styles.searchInput, { 
+                backgroundColor: colors.card, 
+                color: colors.text,
+                borderColor: colors.border 
+              }]}
+              placeholder="Enter URL or search terms..."
+              placeholderTextColor={colors.icon}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={analyzeSearch}
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              style={[styles.searchButton, { backgroundColor: CanaryColors.primary }]}
+              onPress={analyzeSearch}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.searchButtonText}>Analyze</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       {/* Selected Image Preview */}
@@ -319,6 +387,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    paddingHorizontal: 16,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  searchSection: {
+    marginBottom: 20,
+  },
+  searchTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  searchSubtitle: {
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  searchInput: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  searchButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: '#1C1C1C',
     fontSize: 16,
     fontWeight: '600',
   },

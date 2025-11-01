@@ -12,11 +12,18 @@ module.exports = {
       supportsTablet: true,
     },
     android: {
+      package: 'com.canaryapp',
+      permissions: [
+        'android.permission.SYSTEM_ALERT_WINDOW',
+        'android.permission.FOREGROUND_SERVICE',
+        'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
+        'android.permission.POST_NOTIFICATIONS',
+      ],
       adaptiveIcon: {
         backgroundColor: '#FFD300',
-        foregroundImage: './assets/images/android-icon-foreground.png',
-        backgroundImage: './assets/images/android-icon-background.png',
-        monochromeImage: './assets/images/android-icon-monochrome.png',
+        foregroundImage: './assets/images/android-chrome-192x192.png',
+        backgroundImage: './assets/images/android-chrome-512x512.png',
+        monochromeImage: './assets/images/android-chrome-192x192.png',
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -39,6 +46,7 @@ module.exports = {
           },
         },
       ],
+      './plugins/withFloatingScanner.js',
     ],
     experiments: {
       typedRoutes: true,
@@ -46,6 +54,9 @@ module.exports = {
     },
     extra: {
       googleApiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+      eas: {
+        projectId: "44122a16-b5ac-4197-9644-a834f96b9a37"
+      }
     },
   },
 };
