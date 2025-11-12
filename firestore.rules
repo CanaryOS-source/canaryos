@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Helper function to validate user data
+    function isValidUserData() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'lastLoginAt']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.createdAt is timestamp &&
+             data.lastLoginAt is timestamp;
+    }
+    
+    // Users collection - each user can only read/write their own document
+    match /users/{userId} {
+      // Allow read if authenticated and requesting own document
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Allow create if authenticated, creating own document, and data is valid
+      allow create: if isAuthenticated() && 
+                       isOwner(userId) && 
+                       isValidUserData() &&
+                       request.resource.data.uid == request.auth.uid;
+      
+      // Allow update if authenticated, updating own document
+      // Prevent uid and email changes
+      allow update: if isAuthenticated() && 
+                       isOwner(userId) &&
+                       request.resource.data.uid == resource.data.uid &&
+                       request.resource.data.email == resource.data.email;
+      
+      // Allow delete if authenticated and deleting own document
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Scam reports collection (for future use)
+    match /scam_reports/{reportId} {
+      // Allow read if authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow create if authenticated and userId matches auth
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Allow update/delete only if owner
+      allow update, delete: if isAuthenticated() && 
+                               resource.data.userId == request.auth.uid;
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

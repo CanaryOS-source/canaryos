@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "234056429065",
+    "project_id": "canary-os",
+    "storage_bucket": "canary-os.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234056429065:android:e554dcb385e1d370dc92d8",
+        "android_client_info": {
+          "package_name": "com.canaryapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "234056429065-4c3vft763kqdkupjolqdk7nfobotc49o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.canaryapp",
+            "certificate_hash": "568d3201a64f36bde094bacc754742b303e756cf"
+          }
+        },
+        {
+          "client_id": "234056429065-ttch8eop838gsn2vftvsu49udvdl4ef7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsJWqfquUwnXY7ZS3m2dihVIlJ3J3F_IY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "234056429065-ttch8eop838gsn2vftvsu49udvdl4ef7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
