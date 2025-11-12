@@ -2,6 +2,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateObject, generateText } from 'ai';
 import { z } from 'zod';
 import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system';
 
 // Zod schema for structured output
 const scamAnalysisSchema = z.object({
@@ -13,6 +14,85 @@ const scamAnalysisSchema = z.object({
 });
 
 export type ScamAnalysisResult = z.infer<typeof scamAnalysisSchema>;
+
+/**
+ * Analyzes audio file (voicemail) to determine if it contains potential scam content
+ * @param audioUri - URI to the audio file
+ * @param mimeType - MIME type of the audio file
+ * @returns ScamAnalysisResult with detailed analysis
+ */
+export async function analyzeAudioForScam(
+  audioUri: string,
+  mimeType: string
+): Promise<ScamAnalysisResult> {
+  try {
+    const apiKey = Constants.expoConfig?.extra?.googleApiKey || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('Google Generative AI API key not configured. Please set GOOGLE_GENERATIVE_AI_API_KEY in your environment.');
+    }
+
+    const generativeAI = createGoogleGenerativeAI({
+      apiKey: apiKey
+    });
+
+    const model = generativeAI('gemini-2.5-flash');
+
+    const systemPrompt = `You are an expert scam detector AI for Canary OS. Analyze voicemail audio for potential scams including:
+- Vishing (voice phishing) attempts
+- Impersonation of government agencies (IRS, Social Security, law enforcement)
+- Fake tech support calls
+- Fraudulent debt collection
+- Prize/lottery scam calls
+- Robocalls with urgent threats
+- Romance scams
+- Investment/crypto scams
+- Warranty expiration scams
+- Social engineering attempts
+
+Listen for:
+- Urgency and pressure tactics
+- Threats of legal action or arrest
+- Requests for immediate payment
+- Requests for personal information
+- Suspicious caller identification
+- Pre-recorded messages
+- Background noise patterns (call centers)
+
+Be thorough but concise. Focus on actionable insights.`;
+
+    // Read the audio file from the URI using expo-file-system
+    const file = new FileSystem.File(audioUri);
+    const audioBuffer = await file.bytes();
+
+    const { object } = await generateObject({
+      model,
+      schema: scamAnalysisSchema,
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analyze this voicemail for potential scam content. Transcribe what is said and provide a detailed scam analysis.' },
+            {
+              type: 'file',
+              mediaType: mimeType,
+              data: audioBuffer,
+            },
+          ],
+        },
+      ],
+    });
+
+    return object;
+  } catch (error) {
+    console.error('Error analyzing audio:', error);
+    throw error;
+  }
+}
 
 /**
  * Analyzes an image to determine if it contains potential scam content
