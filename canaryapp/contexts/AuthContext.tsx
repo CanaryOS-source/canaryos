@@ -6,6 +6,7 @@ interface AuthContextType {
   userData: UserData | null;
   loading: boolean;
   isAuthenticated: boolean;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -13,6 +14,7 @@ const AuthContext = createContext<AuthContextType>({
   userData: null,
   loading: true,
   isAuthenticated: false,
+  refreshUserData: async () => {},
 });
 
 export const useAuth = () => {
@@ -31,6 +33,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Function to manually refresh user data
+  const refreshUserData = async () => {
+    if (user) {
+      try {
+        const data = await getUserData(user.uid);
+        setUserData(data);
+      } catch (error) {
+        console.error('Error refreshing user data:', error);
+      }
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthState(async (authUser: any) => {
@@ -59,6 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userData,
     loading,
     isAuthenticated: !!user,
+    refreshUserData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

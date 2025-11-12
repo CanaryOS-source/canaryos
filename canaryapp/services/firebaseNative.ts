@@ -16,6 +16,7 @@ export interface UserData {
   photoURL?: string;
   createdAt: FirebaseFirestoreTypes.Timestamp;
   lastLoginAt: FirebaseFirestoreTypes.Timestamp;
+  familyId?: string | null;
 }
 
 // Authentication functions
@@ -149,7 +150,7 @@ export const deleteAccount = async () => {
 export const getUserData = async (uid: string): Promise<UserData | null> => {
   try {
     const userDoc = await firestore().collection('users').doc(uid).get();
-    if (userDoc.exists) {
+    if (userDoc.exists()) {
       return userDoc.data() as UserData;
     }
     return null;

@@ -46,6 +46,7 @@ export interface UserData {
   photoURL?: string;
   createdAt: Timestamp;
   lastLoginAt: Timestamp;
+  familyId?: string | null;
 }
 
 // Authentication functions
