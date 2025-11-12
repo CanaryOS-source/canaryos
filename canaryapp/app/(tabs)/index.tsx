@@ -13,11 +13,13 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { analyzeImageForScam, analyzeTextForScam, ScamAnalysisResult } from '@/services/scamAnalyzer';
+import * as DocumentPicker from 'expo-document-picker';
+import { analyzeImageForScam, analyzeTextForScam, analyzeAudioForScam, ScamAnalysisResult } from '@/services/scamAnalyzer';
 import { Colors, CanaryColors } from '@/constants/theme';
 
 export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<ScamAnalysisResult | null>(null);
@@ -74,6 +76,43 @@ export default function HomeScreen() {
     }
   };
 
+  const pickAudio = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setSelectedAudio(asset.uri);
+        setSelectedImage(null);
+        setAnalysis(null);
+        
+        await analyzeAudio(asset.uri, asset.mimeType || 'audio/mpeg');
+      }
+    } catch (error) {
+      console.error('Error picking audio:', error);
+      Alert.alert('Error', 'Failed to pick audio file. Please try again.');
+    }
+  };
+
+  const analyzeAudio = async (audioUri: string, mimeType: string) => {
+    setIsAnalyzing(true);
+    try {
+      const result = await analyzeAudioForScam(audioUri, mimeType);
+      setAnalysis(result);
+    } catch (error) {
+      console.error('Audio analysis error:', error);
+      Alert.alert(
+        'Analysis Failed',
+        'Failed to analyze the audio. Please check your API key configuration and try again.'
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const analyzeSearch = async () => {
     if (!searchQuery.trim()) {
       Alert.alert('Input Required', 'Please enter a website URL or text to analyze.');
@@ -83,6 +122,7 @@ export default function HomeScreen() {
     Keyboard.dismiss();
     setIsAnalyzing(true);
     setSelectedImage(null);
+    setSelectedAudio(null);
     setAnalysis(null);
 
     try {
@@ -101,6 +141,7 @@ export default function HomeScreen() {
 
   const resetAnalysis = () => {
     setSelectedImage(null);
+    setSelectedAudio(null);
     setSearchQuery('');
     setAnalysis(null);
   };
@@ -124,7 +165,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Main Action Buttons */}
-      {!selectedImage && !analysis && (
+      {!selectedImage && !selectedAudio && !analysis && (
         <>
           <TouchableOpacity
             style={[styles.uploadButton, { backgroundColor: CanaryColors.primary }]}
@@ -132,6 +173,21 @@ export default function HomeScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.uploadButtonText}>Upload Screenshot</Text>
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.icon }]}>OR</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.uploadButton, { backgroundColor: CanaryColors.primary }]}
+            onPress={pickAudio}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.uploadButtonText}>Scan Voicemail</Text>
           </TouchableOpacity>
 
           {/* Divider */}
@@ -177,6 +233,14 @@ export default function HomeScreen() {
       {selectedImage && (
         <View style={[styles.imageContainer, { backgroundColor: colors.card }]}>
           <Image source={{ uri: selectedImage }} style={styles.previewImage} contentFit="contain" />
+        </View>
+      )}
+
+      {/* Selected Audio Preview */}
+      {selectedAudio && (
+        <View style={[styles.audioContainer, { backgroundColor: colors.card }]}>
+          <Text style={[styles.audioText, { color: colors.text }]}>🎵 Audio File Selected</Text>
+          <Text style={[styles.audioSubtext, { color: colors.icon }]}>Analyzing voicemail...</Text>
         </View>
       )}
 
@@ -326,6 +390,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 300,
     borderRadius: 8,
+  },
+  audioContainer: {
+    borderRadius: 12,
+    padding: 24,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  audioText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  audioSubtext: {
+    fontSize: 14,
   },
   loadingContainer: {
     alignItems: 'center',
