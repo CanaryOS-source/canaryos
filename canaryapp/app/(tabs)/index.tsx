@@ -16,6 +16,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { analyzeImageForScam, analyzeTextForScam, analyzeAudioForScam, ScamAnalysisResult } from '@/services/scamAnalyzer';
 import { Colors, CanaryColors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { recordScan } from '@/services/analyticsService';
 
 export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -25,6 +27,7 @@ export default function HomeScreen() {
   const [analysis, setAnalysis] = useState<ScamAnalysisResult | null>(null);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { user } = useAuth();
 
   const pickImage = async () => {
     try {
@@ -65,6 +68,15 @@ export default function HomeScreen() {
     try {
       const result = await analyzeImageForScam(base64Image);
       setAnalysis(result);
+      
+      // Track analytics
+      if (user?.uid) {
+        try {
+          await recordScan(user.uid, result.isScam);
+        } catch (analyticsError) {
+          console.error('Error tracking analytics:', analyticsError);
+        }
+      }
     } catch (error) {
       console.error('Analysis error:', error);
       Alert.alert(
@@ -102,6 +114,15 @@ export default function HomeScreen() {
     try {
       const result = await analyzeAudioForScam(audioUri, mimeType);
       setAnalysis(result);
+      
+      // Track analytics
+      if (user?.uid) {
+        try {
+          await recordScan(user.uid, result.isScam);
+        } catch (analyticsError) {
+          console.error('Error tracking analytics:', analyticsError);
+        }
+      }
     } catch (error) {
       console.error('Audio analysis error:', error);
       Alert.alert(
@@ -128,6 +149,15 @@ export default function HomeScreen() {
     try {
       const result = await analyzeTextForScam(searchQuery.trim());
       setAnalysis(result);
+      
+      // Track analytics
+      if (user?.uid) {
+        try {
+          await recordScan(user.uid, result.isScam);
+        } catch (analyticsError) {
+          console.error('Error tracking analytics:', analyticsError);
+        }
+      }
     } catch (error) {
       console.error('Search analysis error:', error);
       Alert.alert(

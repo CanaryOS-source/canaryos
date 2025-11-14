@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { subscribeToAuthState, getUserData, UserData } from '@/services/firebase';
+import { initializeAnalytics, updateActivity } from '@/services/analyticsService';
 
 interface AuthContextType {
   user: any | null;
@@ -54,6 +55,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const data = await getUserData(authUser.uid);
           setUserData(data);
+          
+          // Initialize analytics and track activity
+          // Run async without blocking auth flow
+          initializeAnalytics(authUser.uid)
+            .then(() => updateActivity(authUser.uid))
+            .catch((analyticsError: any) => {
+              console.error('Error with analytics:', analyticsError);
+            });
         } catch (error) {
           console.error('Error fetching user data:', error);
           setUserData(null);

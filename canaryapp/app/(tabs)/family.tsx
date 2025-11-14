@@ -11,6 +11,7 @@ import {
   TextInput,
   Share,
   Platform,
+  Pressable,
 } from 'react-native';
 import { Colors, CanaryColors } from '@/constants/theme';
 import { useFamily } from '@/contexts/FamilyContext';
@@ -245,16 +246,17 @@ export default function FamilyScreen() {
           const isMemberAdmin = member.role === 'admin';
 
           return (
-            <View
+            <Pressable
               key={member.userId}
               style={[
                 styles.memberCard,
                 { borderBottomColor: colors.border },
               ]}
+              onPress={() => router.push(`/family/member/${member.userId}` as any)}
             >
               <View style={styles.memberInfo}>
                 <IconSymbol
-                  name={isMemberAdmin ? 'person.fill.checkmark' : 'person.fill'}
+                  name="person.fill"
                   size={20}
                   color={isMemberAdmin ? CanaryColors.primary : colors.icon}
                 />
@@ -269,15 +271,21 @@ export default function FamilyScreen() {
                 </View>
               </View>
 
-              {isAdmin && !isCurrentUser && (
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveMember(member.userId, member.displayName)}
-                >
-                  <IconSymbol name="trash" size={18} color={CanaryColors.alertRed} />
-                </TouchableOpacity>
-              )}
-            </View>
+              <View style={styles.memberActions}>
+                {isAdmin && !isCurrentUser && (
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleRemoveMember(member.userId, member.displayName);
+                    }}
+                  >
+                    <IconSymbol name="trash" size={18} color={CanaryColors.alertRed} />
+                  </TouchableOpacity>
+                )}
+                <IconSymbol name="chevron.forward" size={16} color={colors.icon} />
+              </View>
+            </Pressable>
           );
         })}
       </View>
@@ -413,6 +421,11 @@ const styles = StyleSheet.create({
   },
   memberEmail: {
     fontSize: 14,
+  },
+  memberActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   removeButton: {
     padding: 8,

@@ -114,6 +114,27 @@ service cloud.firestore {
       }
     }
     
+    // Analytics collection
+    match /analytics/{userId} {
+      // Allow users to read their own analytics
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Allow users to read analytics of their family members
+      allow read: if isAuthenticated() && 
+                     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId != null &&
+                     exists(/databases/$(database)/documents/users/$(userId)) &&
+                     get(/databases/$(database)/documents/users/$(userId)).data.familyId ==
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId;
+      
+      // Allow users to write their own analytics
+      allow write: if isAuthenticated() && isOwner(userId);
+      
+      // Allow system to create/update analytics
+      allow create, update: if isAuthenticated() && 
+                                request.resource.data.userId == userId;
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
