@@ -45,3 +45,10 @@ app-example
 # Vercel AI SDK
 .vercel
 *.env
+
+# bug reports
+bugreport-*.zip
+
+# module builds
+modules/*/android/build
+modules/*/android/.gradle

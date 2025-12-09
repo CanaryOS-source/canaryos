@@ -1,3 +1,14 @@
+buildscript {
+  // Buildscript is required for standalone evaluation in some IDEs
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:8.1.1' // Match your root project version
+  }
+}
+
 apply plugin: 'com.android.library'
 
 group = 'expo.modules.floatingscanner'
