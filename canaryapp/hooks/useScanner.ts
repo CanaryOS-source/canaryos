@@ -1,5 +1,13 @@
-import { useState, useEffect } from 'react';
-import { ScanService } from '../services/ScanService';
+import { useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
+import {
+  initialize,
+  analyzeImage,
+  analyzeText,
+  getStatus,
+  isAvailable,
+  OnDeviceAnalysisResult,
+} from '../services/ondevice';
 
 export enum ScanState {
   IDLE,
@@ -11,67 +19,156 @@ export enum ScanState {
   ERROR
 }
 
+export interface ScanResult {
+  state: ScanState;
+  confidence: number;
+  analysisResult: OnDeviceAnalysisResult | null;
+  isOnDevice: boolean;
+}
+
 export function useScanner() {
   const [state, setState] = useState<ScanState>(ScanState.IDLE);
   const [confidence, setConfidence] = useState<number>(0);
+  const [analysisResult, setAnalysisResult] = useState<OnDeviceAnalysisResult | null>(null);
+  const [isOnDevice, setIsOnDevice] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(false);
 
+  // Initialize on-device analysis on mount
   useEffect(() => {
-    // Attempt to load model on mount
     const init = async () => {
+      // Only initialize on native platforms
+      if (Platform.OS === 'web') {
+        console.log('[useScanner] Web platform - on-device analysis unavailable');
+        setState(ScanState.IDLE);
+        return;
+      }
+      
+      setIsInitializing(true);
       setState(ScanState.LOADING_MODEL);
+      
       try {
-        // We need to pass the require() of the .tflite file here.
-        // For now, we will wrap this in a try/catch in the UI or pass a dummy if missing.
-        // This is a placeholder; in real app, import the asset.
-        // await ScanService.loadModel(require('../../assets/model.tflite'));
-        
-        // Simulating load for now since we don't have the actual file yet
+        await initialize();
+        const status = getStatus();
+        console.log('[useScanner] On-device analysis initialized:', status);
         setState(ScanState.IDLE);
       } catch (e) {
-        console.error(e);
-        setState(ScanState.ERROR);
+        console.warn('[useScanner] On-device initialization failed, using fallback:', e);
+        // Don't set error state - we can still use simulation/fallback mode
+        setState(ScanState.IDLE);
+      } finally {
+        setIsInitializing(false);
       }
     };
+    
     init();
   }, []);
 
-  const scanImage = async (uri: string) => {
+  /**
+   * Scan an image for scam content using on-device analysis
+   */
+  const scanImage = useCallback(async (uri: string) => {
     setState(ScanState.SCANNING);
+    setAnalysisResult(null);
+    
     try {
-      // START SIMULATION (Remove when real model is present)
-      // Simulate network/processing delay
-      await new Promise(r => setTimeout(r, 1500));
-      const simulatedScore = Math.random(); // Random score for demo
-      // END SIMULATION
+      console.log(`[useScanner] Scanning image: ${uri}`);
       
-      // REAL CALL (Uncomment when model is present)
-      // const score = await ScanService.classifyImage(uri);
-      // const simulatedScore = score;
-
-      setConfidence(simulatedScore);
-
-      if (simulatedScore > 0.8) {
+      // Use on-device analysis
+      const result = await analyzeImage(uri, {
+        // Use simulation if models aren't fully loaded
+        useSimulation: false,
+      });
+      
+      setAnalysisResult(result);
+      setConfidence(result.fusedScore);
+      setIsOnDevice(result.isOnDevice);
+      
+      // Map risk level to scan state
+      if (result.riskLevel === 'critical' || result.riskLevel === 'high') {
         setState(ScanState.DANGER);
-      } else if (simulatedScore > 0.5) {
+      } else if (result.riskLevel === 'medium') {
         setState(ScanState.SUSPICIOUS);
       } else {
         setState(ScanState.SAFE);
       }
+      
+      console.log(`[useScanner] Analysis complete: ${result.isScam ? 'SCAM' : 'SAFE'} (${(result.fusedScore * 100).toFixed(1)}%)`);
+      
+      return result;
     } catch (e) {
-      console.error(e);
+      console.error('[useScanner] Scan failed:', e);
       setState(ScanState.ERROR);
+      return null;
     }
-  };
+  }, []);
 
-  const reset = () => {
+  /**
+   * Scan text content directly (no image)
+   */
+  const scanText = useCallback(async (text: string) => {
+    setState(ScanState.SCANNING);
+    setAnalysisResult(null);
+    
+    try {
+      console.log(`[useScanner] Scanning text (${text.length} chars)`);
+      
+      const result = await analyzeText(text);
+      
+      setAnalysisResult(result);
+      setConfidence(result.fusedScore);
+      setIsOnDevice(result.isOnDevice);
+      
+      // Map risk level to scan state
+      if (result.riskLevel === 'critical' || result.riskLevel === 'high') {
+        setState(ScanState.DANGER);
+      } else if (result.riskLevel === 'medium') {
+        setState(ScanState.SUSPICIOUS);
+      } else {
+        setState(ScanState.SAFE);
+      }
+      
+      return result;
+    } catch (e) {
+      console.error('[useScanner] Text scan failed:', e);
+      setState(ScanState.ERROR);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Reset scanner state
+   */
+  const reset = useCallback(() => {
     setState(ScanState.IDLE);
     setConfidence(0);
-  };
+    setAnalysisResult(null);
+  }, []);
+
+  /**
+   * Check if on-device scanning is available
+   */
+  const checkAvailability = useCallback(() => {
+    return isAvailable();
+  }, []);
 
   return {
+    // State
     state,
     confidence,
+    analysisResult,
+    isOnDevice,
+    isInitializing,
+    
+    // Actions
     scanImage,
-    reset
+    scanText,
+    reset,
+    
+    // Utilities
+    checkAvailability,
+    getStatus,
   };
 }
+
+// Re-export types for convenience
+export type { OnDeviceAnalysisResult };

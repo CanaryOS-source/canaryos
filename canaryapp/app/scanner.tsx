@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useScanner, ScanState } from '../hooks/useScanner';
+import { useScanner, ScanState, OnDeviceAnalysisResult } from '../hooks/useScanner';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ScannerScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const { state, confidence, scanImage, reset } = useScanner();
+  const { state, confidence, analysisResult, isOnDevice, scanImage, reset } = useScanner();
 
   const pickImage = async () => {
     // Request permissions first
@@ -35,48 +35,112 @@ export default function ScannerScreen() {
     }
   };
 
+  // Render detailed analysis info
+  const renderDetailedAnalysis = () => {
+    if (!analysisResult) return null;
+    
+    return (
+      <View style={styles.detailsContainer}>
+        {/* On-device badge */}
+        {isOnDevice && (
+          <View style={styles.onDeviceBadge}>
+            <Ionicons name="shield-checkmark" size={14} color="#34C759" />
+            <Text style={styles.onDeviceText}>Analyzed on-device</Text>
+          </View>
+        )}
+        
+        {/* Red flags */}
+        {analysisResult.redFlags.length > 0 && (
+          <View style={styles.flagsContainer}>
+            <Text style={styles.sectionTitle}>Warning Signs Detected:</Text>
+            {analysisResult.redFlags.map((flag, index) => (
+              <View key={index} style={styles.flagItem}>
+                <Ionicons name="alert" size={16} color="#FF9500" />
+                <Text style={styles.flagText}>{flag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        
+        {/* Safety tips */}
+        {analysisResult.safetyTips.length > 0 && (
+          <View style={styles.tipsContainer}>
+            <Text style={styles.sectionTitle}>Safety Tips:</Text>
+            {analysisResult.safetyTips.map((tip, index) => (
+              <View key={index} style={styles.tipItem}>
+                <Ionicons name="bulb" size={16} color="#007AFF" />
+                <Text style={styles.tipText}>{tip}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        
+        {/* Performance info */}
+        <Text style={styles.latencyText}>
+          Analysis completed in {analysisResult.totalLatencyMs}ms
+        </Text>
+      </View>
+    );
+  };
+
   const renderResult = () => {
     switch (state) {
       case ScanState.IDLE:
         return null;
       case ScanState.LOADING_MODEL:
-        return <Text style={styles.statusText}>Initializing Neural Engine...</Text>;
+        return <Text style={styles.statusText}>Initializing On-Device Analysis...</Text>;
       case ScanState.SCANNING:
         return (
           <View style={styles.resultContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.statusText}>Analyzing visual patterns...</Text>
+            <Text style={styles.statusText}>Analyzing with on-device AI...</Text>
+            <Text style={styles.subStatusText}>OCR + Visual + Text Analysis</Text>
           </View>
         );
       case ScanState.SAFE:
         return (
-          <View style={[styles.resultCard, styles.cardSafe]}>
-            <Ionicons name="checkmark-circle" size={48} color="#34C759" />
-            <Text style={styles.resultTitle}>Likely Safe</Text>
-            <Text style={styles.resultDesc}>No scam indicators detected.</Text>
-            <Text style={styles.confidence}>Confidence: {(confidence * 100).toFixed(1)}%</Text>
-          </View>
+          <>
+            <View style={[styles.resultCard, styles.cardSafe]}>
+              <Ionicons name="checkmark-circle" size={48} color="#34C759" />
+              <Text style={styles.resultTitle}>Likely Safe</Text>
+              <Text style={styles.resultDesc}>
+                {analysisResult?.explanation || 'No scam indicators detected.'}
+              </Text>
+              <Text style={styles.confidence}>Risk Score: {(confidence * 100).toFixed(1)}%</Text>
+            </View>
+            {renderDetailedAnalysis()}
+          </>
         );
       case ScanState.SUSPICIOUS:
         return (
-          <View style={[styles.resultCard, styles.cardSuspicious]}>
-            <Ionicons name="warning" size={48} color="#FF9500" />
-            <Text style={styles.resultTitle}>Suspicious</Text>
-            <Text style={styles.resultDesc}>Contains elements common in scams.</Text>
-            <Text style={styles.confidence}>Confidence: {(confidence * 100).toFixed(1)}%</Text>
-          </View>
+          <>
+            <View style={[styles.resultCard, styles.cardSuspicious]}>
+              <Ionicons name="warning" size={48} color="#FF9500" />
+              <Text style={styles.resultTitle}>Suspicious</Text>
+              <Text style={styles.resultDesc}>
+                {analysisResult?.explanation || 'Contains elements common in scams.'}
+              </Text>
+              <Text style={styles.confidence}>Risk Score: {(confidence * 100).toFixed(1)}%</Text>
+            </View>
+            {renderDetailedAnalysis()}
+          </>
         );
       case ScanState.DANGER:
         return (
-          <View style={[styles.resultCard, styles.cardDanger]}>
-            <Ionicons name="alert-circle" size={48} color="#FF3B30" />
-            <Text style={styles.resultTitle}>High Risk Scam</Text>
-            <Text style={styles.resultDesc}>Do not interact with this content.</Text>
-            <Text style={styles.confidence}>Risk Score: {(confidence * 100).toFixed(1)}%</Text>
-          </View>
+          <>
+            <View style={[styles.resultCard, styles.cardDanger]}>
+              <Ionicons name="alert-circle" size={48} color="#FF3B30" />
+              <Text style={styles.resultTitle}>High Risk - Likely Scam</Text>
+              <Text style={styles.resultDesc}>
+                {analysisResult?.explanation || 'Do not interact with this content.'}
+              </Text>
+              <Text style={styles.confidence}>Risk Score: {(confidence * 100).toFixed(1)}%</Text>
+            </View>
+            {renderDetailedAnalysis()}
+          </>
         );
       case ScanState.ERROR:
-        return <Text style={styles.errorText}>Error analyzing image.</Text>;
+        return <Text style={styles.errorText}>Error analyzing image. Please try again.</Text>;
       default:
         return null;
     }
@@ -241,5 +305,80 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#FF3B30',
     fontSize: 16,
+  },
+  subStatusText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#A0A0A0',
+  },
+  // Detailed analysis styles
+  detailsContainer: {
+    width: '100%',
+    marginTop: 16,
+  },
+  onDeviceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  onDeviceText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: '#2E7D32',
+    fontWeight: '500',
+  },
+  flagsContainer: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  flagItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  flagText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#5D4037',
+    lineHeight: 20,
+  },
+  tipsContainer: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  tipText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#1565C0',
+    lineHeight: 20,
+  },
+  latencyText: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#9E9E9E',
+    marginTop: 8,
   },
 });

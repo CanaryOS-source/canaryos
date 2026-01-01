@@ -1,0 +1,4 @@
+# This file ensures the models directory is tracked by git
+# Place TFLite model files here:
+# - mobilenet_v3_scam_detect.tflite (visual classifier)
+# - mobilebert_scam_intent.tflite (text classifier)
