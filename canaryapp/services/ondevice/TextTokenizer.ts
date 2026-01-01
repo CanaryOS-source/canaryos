@@ -1,7 +1,6 @@
 /**
  * Text Tokenizer Service
  * Implements WordPiece tokenization for MobileBERT/BERT models
- * Phase 1: The Digital Lab
  * 
  * This is a lightweight JavaScript implementation suitable for mobile
  * For sequences under 512 tokens, JS performance is acceptable
@@ -22,7 +21,7 @@ const SEP_ID = 102;
 
 // Common vocabulary subset for scam detection
 // In production, load the full vocab.txt from assets
-// This is a minimal vocab for Phase 1 testing
+// This is a minimal vocab - expand with full WordPiece vocabulary
 const BASIC_VOCAB: Map<string, number> = new Map([
   [PAD_TOKEN, PAD_ID],
   [UNK_TOKEN, UNK_ID],
@@ -104,11 +103,11 @@ let fullVocab: Map<string, number> | null = null;
 
 /**
  * Load vocabulary from vocab.txt file
- * For Phase 1, we use a basic vocabulary
+ * Currently uses basic vocabulary - expand for production
  */
 export async function loadVocabulary(vocabPath?: string): Promise<void> {
-  // In Phase 1, use basic vocab
-  // In production, load from vocabPath
+  // TODO: Load full vocabulary from vocabPath asset
+  // Currently using basic vocab
   fullVocab = BASIC_VOCAB;
   console.log(`[Tokenizer] Loaded vocabulary with ${fullVocab.size} tokens`);
 }

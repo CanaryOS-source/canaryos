@@ -1,7 +1,6 @@
 /**
  * OCR Service
  * Extracts text from images using Google ML Kit Text Recognition
- * Phase 1: The Digital Lab
  */
 
 import { Platform } from 'react-native';

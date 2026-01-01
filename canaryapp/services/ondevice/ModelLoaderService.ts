@@ -1,7 +1,6 @@
 /**
  * Model Loader Service
  * Handles loading, caching, and versioning of TFLite models
- * Phase 1: The Digital Lab
  * 
  * Security: Implements SHA-256 hash verification for model integrity
  */
@@ -13,7 +12,7 @@ import { Asset } from 'expo-asset';
 import { loadTensorflowModel, TensorflowModel } from 'react-native-fast-tflite';
 import { ModelConfig, ModelLoadState, DEFAULT_MODEL_CONFIG } from './types';
 
-// Firebase Storage URLs for model updates (Phase 1: use bundled models)
+// Firebase Storage URLs for model updates
 const FIREBASE_MODEL_BASE_URL = 'https://firebasestorage.googleapis.com/v0/b/canary-os.appspot.com/o/models';
 
 // Local cache directory
@@ -69,16 +68,15 @@ function getCachedModelPath(modelName: string): string {
  * Security measure to prevent model tampering
  */
 async function verifyModelIntegrity(modelPath: string, expectedHash: string): Promise<boolean> {
-  // In Phase 1, we trust bundled models
-  // In production, implement actual SHA-256 verification
-  // This would use expo-crypto or a native module
-  console.log(`[ModelLoader] Skipping hash verification for Phase 1 (bundled models)`);
+  // TODO: Implement actual SHA-256 verification using expo-crypto
+  // For now, we trust bundled models
+  console.log(`[ModelLoader] Hash verification placeholder - implement with expo-crypto`);
   return true;
 }
 
 /**
  * Download a model from Firebase Storage
- * For Phase 1, we primarily use bundled models
+ * Used for model updates after initial bundled deployment
  */
 async function downloadModel(modelName: string, remoteUrl: string): Promise<string> {
   await ensureCacheDirectory();
@@ -125,15 +123,14 @@ export async function loadVisualModel(): Promise<TensorflowModel> {
   const startTime = Date.now();
   
   try {
-    // Phase 1: Try to load from bundled assets first
-    // In production, check for updates from Firebase
+    // Try to load from bundled assets first
+    // If not found, check cache or throw error
     
     // Check if we have a bundled model
     let modelUri: string;
     
     try {
       // Try to load from bundled assets
-      // Note: For Phase 1, we'll use a placeholder/pre-trained model
       const asset = Asset.fromModule(require('../../assets/models/mobilenet_v3_scam_detect.tflite'));
       await asset.downloadAsync();
       
@@ -151,8 +148,7 @@ export async function loadVisualModel(): Promise<TensorflowModel> {
         modelUri = getCachedModelPath(modelName);
         console.log(`[ModelLoader] Using cached visual model: ${modelUri}`);
       } else {
-        // For Phase 1, we'll create a simple test mode without actual model
-        console.warn('[ModelLoader] Visual model not available - running in test mode');
+        // Model not available - this is an error condition
         throw new Error('Visual model not available - please add mobilenet_v3_scam_detect.tflite to assets/models/');
       }
     }

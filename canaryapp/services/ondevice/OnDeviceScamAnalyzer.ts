@@ -1,6 +1,6 @@
 /**
  * On-Device Scam Analyzer
- * Main orchestrator for Phase 1: The Digital Lab
+ * Main orchestrator for on-device scam detection
  * 
  * Coordinates:
  * 1. OCR text extraction
@@ -22,7 +22,8 @@ import {
 // Import services
 import { 
   loadAllModels, 
-  isReady, 
+  isReady,
+  isFullyLoaded,
   getLoadState,
   unloadModels,
 } from './ModelLoaderService';
@@ -32,12 +33,10 @@ import {
   normalizeText,
 } from './OCRService';
 import { 
-  classify as classifyVisual, 
-  classifySimulated as classifyVisualSimulated,
+  classify as classifyVisual,
 } from './VisualClassifierService';
 import { 
-  classify as classifyText, 
-  classifySimulated as classifyTextSimulated,
+  classify as classifyText,
   quickScamCheck,
 } from './TextClassifierService';
 import { fuseResults } from './FusionEngine';
@@ -49,6 +48,9 @@ let initializationPromise: Promise<void> | null = null;
 /**
  * Initialize the on-device analysis system
  * Loads models and prepares services
+ * 
+ * IMPORTANT: Models MUST be loaded successfully for analysis to work.
+ * Ensure .tflite files are placed in assets/models/ before calling this.
  */
 export async function initialize(): Promise<void> {
   if (isInitialized) {
@@ -69,19 +71,22 @@ export async function initialize(): Promise<void> {
       const { visual, text, errors } = await loadAllModels();
       
       if (errors.length > 0) {
-        console.warn('[OnDeviceAnalyzer] Some models failed to load:', errors);
-        // Continue anyway - we can fall back to simulated/heuristic mode
+        console.error('[OnDeviceAnalyzer] Model loading errors:', errors);
+        throw new Error(`Failed to load models: ${errors.join('; ')}`);
+      }
+      
+      if (!visual || !text) {
+        throw new Error('Models failed to load - ensure .tflite files are in assets/models/');
       }
       
       isInitialized = true;
       console.log('[OnDeviceAnalyzer] Initialization complete');
-      console.log(`[OnDeviceAnalyzer] Visual model: ${visual ? 'loaded' : 'unavailable'}`);
-      console.log(`[OnDeviceAnalyzer] Text model: ${text ? 'loaded' : 'unavailable'}`);
+      console.log(`[OnDeviceAnalyzer] Visual model: loaded`);
+      console.log(`[OnDeviceAnalyzer] Text model: loaded`);
       console.log(`[OnDeviceAnalyzer] OCR: ${isOCRAvailable() ? 'available' : 'unavailable'}`);
     } catch (error) {
       console.error('[OnDeviceAnalyzer] Initialization failed:', error);
-      // Mark as initialized anyway so we can use fallback mode
-      isInitialized = true;
+      initializationPromise = null;
       throw error;
     } finally {
       initializationPromise = null;
@@ -108,7 +113,9 @@ export function getStatus(): OnDeviceServiceStatus {
 
 /**
  * Analyze an image for scam content
- * This is the main entry point for Phase 1: The Digital Lab
+ * This is the main entry point for on-device scam detection.
+ * 
+ * REQUIRES: Models must be loaded via initialize() before calling this.
  * 
  * @param imageUri - Local URI of the image to analyze
  * @param options - Analysis options
@@ -116,7 +123,6 @@ export function getStatus(): OnDeviceServiceStatus {
 export async function analyzeImage(
   imageUri: string,
   options: {
-    useSimulation?: boolean; // Use simulated results for testing
     skipOCR?: boolean; // Skip text extraction
     skipVisual?: boolean; // Skip visual analysis
   } = {}
@@ -125,31 +131,17 @@ export async function analyzeImage(
   
   console.log(`[OnDeviceAnalyzer] Analyzing image: ${imageUri}`);
   
-  // Ensure initialized
-  if (!isInitialized) {
-    console.log('[OnDeviceAnalyzer] Auto-initializing...');
-    try {
-      await initialize();
-    } catch (e) {
-      console.warn('[OnDeviceAnalyzer] Initialization failed, using fallback mode');
-    }
+  // Ensure initialized with models loaded
+  if (!isInitialized || !isFullyLoaded()) {
+    throw new Error('On-device analyzer not initialized. Call initialize() first and ensure models are loaded.');
   }
-  
-  const useSimulation = options.useSimulation || !isReady();
   
   // Run analysis tasks in parallel
   const tasks: Promise<any>[] = [];
   
   // Visual classification
   if (!options.skipVisual) {
-    if (useSimulation) {
-      tasks.push(classifyVisualSimulated(imageUri));
-    } else {
-      tasks.push(classifyVisual(imageUri).catch(err => {
-        console.error('[OnDeviceAnalyzer] Visual classification failed:', err);
-        return classifyVisualSimulated(imageUri);
-      }));
-    }
+    tasks.push(classifyVisual(imageUri));
   } else {
     tasks.push(Promise.resolve(null));
   }
@@ -170,14 +162,7 @@ export async function analyzeImage(
         console.log(`[OnDeviceAnalyzer] Extracted ${normalizedText.length} chars of text`);
         
         // Classify text
-        if (useSimulation) {
-          return classifyTextSimulated(normalizedText);
-        } else {
-          return classifyText(normalizedText).catch(err => {
-            console.error('[OnDeviceAnalyzer] Text classification failed:', err);
-            return classifyTextSimulated(normalizedText);
-          });
-        }
+        return classifyText(normalizedText);
       })()
     );
   } else {
@@ -206,6 +191,8 @@ export async function analyzeImage(
 /**
  * Analyze text directly (without image)
  * Useful for analyzing copied text or direct input
+ * 
+ * REQUIRES: Models must be loaded via initialize() before calling this.
  */
 export async function analyzeText(text: string): Promise<OnDeviceAnalysisResult> {
   const startTime = Date.now();
@@ -230,21 +217,20 @@ export async function analyzeText(text: string): Promise<OnDeviceAnalysisResult>
     };
   }
   
+  // Ensure initialized with models loaded
+  if (!isInitialized || !isFullyLoaded()) {
+    throw new Error('On-device analyzer not initialized. Call initialize() first and ensure models are loaded.');
+  }
+  
   console.log(`[OnDeviceAnalyzer] Analyzing text (${text.length} chars)`);
   
   // Quick check for obvious scams
   if (quickScamCheck(text)) {
-    console.log('[OnDeviceAnalyzer] Quick check detected obvious scam');
+    console.log('[OnDeviceAnalyzer] Quick check detected obvious scam indicators');
   }
   
   // Run text classification
-  const useSimulation = !isReady();
-  const textResult = useSimulation
-    ? await classifyTextSimulated(text)
-    : await classifyText(text).catch(err => {
-        console.error('[OnDeviceAnalyzer] Text classification failed:', err);
-        return classifyTextSimulated(text);
-      });
+  const textResult = await classifyText(text);
   
   // Fuse with null visual result
   const fusedResult = fuseResults(null, textResult);
@@ -258,6 +244,8 @@ export async function analyzeText(text: string): Promise<OnDeviceAnalysisResult>
 /**
  * Quick analysis for real-time feedback
  * Returns basic risk assessment with minimal latency
+ * 
+ * REQUIRES: Models must be loaded via initialize() before calling this.
  */
 export async function quickAnalyze(imageUri: string): Promise<{
   isScam: boolean;
@@ -266,8 +254,13 @@ export async function quickAnalyze(imageUri: string): Promise<{
 }> {
   const startTime = Date.now();
   
-  // Use simulated classification for speed
-  const visualResult = await classifyVisualSimulated(imageUri);
+  // Ensure initialized with models loaded
+  if (!isInitialized || !isFullyLoaded()) {
+    throw new Error('On-device analyzer not initialized. Call initialize() first and ensure models are loaded.');
+  }
+  
+  // Use visual classification for quick results
+  const visualResult = await classifyVisual(imageUri);
   
   return {
     isScam: visualResult.confidence > 0.5 && 
@@ -279,13 +272,14 @@ export async function quickAnalyze(imageUri: string): Promise<{
 
 /**
  * Check if on-device analysis is available
+ * Returns true only on native platforms with models loaded
  */
 export function isAvailable(): boolean {
-  // On web, we fall back to cloud
+  // On web, on-device analysis is not available
   if (Platform.OS === 'web') return false;
   
-  // On native, we can always use simulation mode
-  return true;
+  // Must be initialized with models loaded
+  return isInitialized && isFullyLoaded();
 }
 
 /**

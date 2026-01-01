@@ -1,7 +1,6 @@
 /**
  * Visual Classifier Service
  * Runs MobileNetV3 inference for visual scam detection
- * Phase 1: The Digital Lab
  * 
  * Detects suspicious UI elements: login fields, urgency colors, impersonated logos
  */
@@ -47,15 +46,14 @@ export async function preprocessImage(imageUri: string): Promise<PreprocessedIma
   }
   
   // Convert base64 to pixel data
-  // Note: In a production app, we'd use a native module for efficient pixel extraction
-  // For Phase 1, we'll create a normalized tensor from the image dimensions
+  // TODO: Use react-native-image-to-tensor or native module for efficient pixel extraction
+  // Currently using placeholder - replace with actual pixel extraction
   const tensor = new Float32Array(INPUT_SIZE);
   
-  // For Phase 1 without actual pixel extraction, we'll use a placeholder
-  // In production, use react-native-image-to-tensor or similar
-  // This simulates normalized pixel values (0-1 range)
+  // Placeholder implementation - replace with actual base64 to tensor conversion
+  // In production, decode base64 and extract RGB pixel values
   for (let i = 0; i < INPUT_SIZE; i++) {
-    // Placeholder: would be actual normalized pixel values
+    // Placeholder: would be actual normalized pixel values (0-1 range)
     tensor[i] = 0.5;
   }
   
@@ -166,92 +164,8 @@ export async function classify(imageUri: string): Promise<VisualAnalysisResult> 
     };
   } catch (error) {
     console.error('[VisualClassifier] Classification failed:', error);
-    
-    // Return safe with low confidence on error
-    return {
-      category: VisualCategory.SAFE,
-      confidence: 0,
-      probabilities: { safe: 0, login: 0, warning: 0, critical: 0 },
-      latencyMs: Date.now() - startTime,
-    };
+    throw error;
   }
-}
-
-/**
- * Run classification with simulated results (for testing without actual model)
- * Analyzes basic image characteristics to provide plausible results
- */
-export async function classifySimulated(imageUri: string): Promise<VisualAnalysisResult> {
-  const startTime = Date.now();
-  
-  console.log('[VisualClassifier] Running simulated classification...');
-  
-  // Simulate processing time
-  await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
-  
-  // Generate plausible random results
-  // In a real scenario, this would be actual model output
-  const random = Math.random();
-  
-  let category: VisualCategory;
-  let probabilities: { safe: number; login: number; warning: number; critical: number };
-  
-  if (random < 0.5) {
-    category = VisualCategory.SAFE;
-    probabilities = {
-      safe: 0.7 + Math.random() * 0.25,
-      login: Math.random() * 0.15,
-      warning: Math.random() * 0.1,
-      critical: Math.random() * 0.05,
-    };
-  } else if (random < 0.7) {
-    category = VisualCategory.LOGIN;
-    probabilities = {
-      safe: Math.random() * 0.2,
-      login: 0.5 + Math.random() * 0.4,
-      warning: Math.random() * 0.2,
-      critical: Math.random() * 0.1,
-    };
-  } else if (random < 0.9) {
-    category = VisualCategory.WARNING;
-    probabilities = {
-      safe: Math.random() * 0.15,
-      login: Math.random() * 0.2,
-      warning: 0.5 + Math.random() * 0.35,
-      critical: Math.random() * 0.15,
-    };
-  } else {
-    category = VisualCategory.CRITICAL;
-    probabilities = {
-      safe: Math.random() * 0.1,
-      login: Math.random() * 0.1,
-      warning: Math.random() * 0.2,
-      critical: 0.6 + Math.random() * 0.35,
-    };
-  }
-  
-  // Normalize probabilities
-  const sum = probabilities.safe + probabilities.login + probabilities.warning + probabilities.critical;
-  probabilities.safe /= sum;
-  probabilities.login /= sum;
-  probabilities.warning /= sum;
-  probabilities.critical /= sum;
-  
-  const confidence = Math.max(
-    probabilities.safe,
-    probabilities.login,
-    probabilities.warning,
-    probabilities.critical
-  );
-  
-  const latencyMs = Date.now() - startTime;
-  
-  return {
-    category,
-    confidence,
-    probabilities,
-    latencyMs,
-  };
 }
 
 /**

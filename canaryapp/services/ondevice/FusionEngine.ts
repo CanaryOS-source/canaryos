@@ -1,7 +1,6 @@
 /**
  * Fusion Engine
  * Combines visual and text analysis scores into final risk assessment
- * Phase 1: The Digital Lab
  * 
  * Uses a weighted heuristic approach:
  * Score_Final = max(Score_Visual, Score_Text)
@@ -210,7 +209,7 @@ function getRiskLevel(score: number): 'low' | 'medium' | 'high' | 'critical' {
 /**
  * Fuse visual and text analysis results into final assessment
  * 
- * Phase 1 Strategy: MAX fusion
+ * Strategy: MAX fusion
  * If EITHER visual OR text analysis detects a scam, flag it
  */
 export function fuseResults(
@@ -223,7 +222,7 @@ export function fuseResults(
   const visualScore = visualResult ? getVisualRiskScore(visualResult) : 0;
   const textScore = textResult ? textResult.riskScore : 0;
   
-  // Phase 1: MAX fusion strategy
+  // MAX fusion strategy
   // Flag if either component detects risk
   const fusedScore = Math.max(visualScore, textScore);
   

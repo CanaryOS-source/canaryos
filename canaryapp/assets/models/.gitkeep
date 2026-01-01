@@ -1,4 +1,12 @@
-# This file ensures the models directory is tracked by git
-# Place TFLite model files here:
-# - mobilenet_v3_scam_detect.tflite (visual classifier)
-# - mobilebert_scam_intent.tflite (text classifier)
+# TFLite Models Directory
+#
+# REQUIRED: Place the following model files here before running the app:
+#
+# 1. mobilenet_v3_scam_detect.tflite (Visual classifier - MobileNetV3-Small)
+# 2. mobilebert_scam_intent.tflite (Text classifier - MobileBERT)
+#
+# See README.md in this directory for detailed setup instructions.
+#
+# After adding models:
+#   1. Run: npx expo prebuild --clean
+#   2. Run: npm run android (or npm run ios)

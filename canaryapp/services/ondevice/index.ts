@@ -1,12 +1,14 @@
 /**
  * On-Device Scam Analysis Module
- * Phase 1: The Digital Lab
  * 
  * This module provides complete on-device scam detection capabilities:
  * - Visual analysis using MobileNetV3 (TFLite)
  * - Text analysis using MobileBERT (TFLite) + heuristics
  * - OCR via Google ML Kit
  * - Score fusion for final risk assessment
+ * 
+ * IMPORTANT: TFLite models must be placed in assets/models/ before use.
+ * See assets/models/README.md for setup instructions.
  * 
  * Privacy: All processing happens on-device. No data leaves the device.
  */

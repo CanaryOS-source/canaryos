@@ -1,7 +1,6 @@
 /**
  * Text Classifier Service
  * Runs MobileBERT inference for textual scam intent detection
- * Phase 1: The Digital Lab
  * 
  * Detects semantic patterns: urgency, financial requests, coercion
  */
@@ -228,55 +227,28 @@ export async function classify(text: string): Promise<TextAnalysisResult> {
   console.log(`[TextClassifier] Heuristic score: ${(heuristicScore * 100).toFixed(1)}%`);
   console.log(`[TextClassifier] Detected ${patterns.length} patterns`);
   
-  // Try ML model inference
-  let modelScore = await classifyWithModel(text);
+  // Run ML model inference
+  const modelScore = await classifyWithModel(text);
   
-  // If model failed, use heuristic score only
   if (modelScore < 0) {
-    console.log('[TextClassifier] Using heuristic score only (model unavailable)');
-    modelScore = heuristicScore;
+    // Model failed - this is an error condition, not a fallback
+    throw new Error('Text model inference failed - model may not be loaded');
   }
   
   // Combine scores (weighted average)
-  // Give more weight to model when available
-  const combinedScore = modelScore >= 0
-    ? modelScore * 0.6 + heuristicScore * 0.4
-    : heuristicScore;
+  // ML model weighted higher as it captures semantic meaning
+  const combinedScore = modelScore * 0.6 + heuristicScore * 0.4;
   
   const latencyMs = Date.now() - startTime;
   
-  console.log(`[TextClassifier] Final score: ${(combinedScore * 100).toFixed(1)}% in ${latencyMs}ms`);
+  console.log(`[TextClassifier] Model score: ${(modelScore * 100).toFixed(1)}%`);
+  console.log(`[TextClassifier] Combined score: ${(combinedScore * 100).toFixed(1)}% in ${latencyMs}ms`);
   
   return {
     riskScore: combinedScore,
     extractedText: text,
     detectedPatterns: patterns,
     latencyMs,
-  };
-}
-
-/**
- * Run simulated classification for testing
- */
-export async function classifySimulated(text: string): Promise<TextAnalysisResult> {
-  const startTime = Date.now();
-  
-  // Simulate processing time
-  await new Promise(resolve => setTimeout(resolve, 30 + Math.random() * 70));
-  
-  // Run real pattern detection
-  const patterns = detectPatterns(text);
-  const heuristicScore = calculateHeuristicScore(patterns);
-  
-  // Add some randomness to simulate model variation
-  const modelVariation = (Math.random() - 0.5) * 0.2;
-  const finalScore = Math.max(0, Math.min(1, heuristicScore + modelVariation));
-  
-  return {
-    riskScore: finalScore,
-    extractedText: text,
-    detectedPatterns: patterns,
-    latencyMs: Date.now() - startTime,
   };
 }
 

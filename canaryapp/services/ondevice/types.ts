@@ -1,6 +1,5 @@
 /**
  * Type definitions for On-Device Scam Analysis
- * Phase 1: The Digital Lab
  */
 
 // Model configuration types
@@ -19,7 +18,7 @@ export interface ModelMetadata {
   maxSequenceLength: number;
 }
 
-// Default model configuration for Phase 1
+// Default model configuration
 export const DEFAULT_MODEL_CONFIG: ModelMetadata = {
   visualModel: {
     name: 'mobilenet_v3_scam_detect',

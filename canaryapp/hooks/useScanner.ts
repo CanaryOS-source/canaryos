@@ -52,9 +52,9 @@ export function useScanner() {
         console.log('[useScanner] On-device analysis initialized:', status);
         setState(ScanState.IDLE);
       } catch (e) {
-        console.warn('[useScanner] On-device initialization failed, using fallback:', e);
-        // Don't set error state - we can still use simulation/fallback mode
-        setState(ScanState.IDLE);
+        console.error('[useScanner] On-device initialization failed:', e);
+        // Set error state - models are required
+        setState(ScanState.ERROR);
       } finally {
         setIsInitializing(false);
       }
@@ -65,6 +65,7 @@ export function useScanner() {
 
   /**
    * Scan an image for scam content using on-device analysis
+   * REQUIRES: Models must be loaded successfully during initialization
    */
   const scanImage = useCallback(async (uri: string) => {
     setState(ScanState.SCANNING);
@@ -73,11 +74,8 @@ export function useScanner() {
     try {
       console.log(`[useScanner] Scanning image: ${uri}`);
       
-      // Use on-device analysis
-      const result = await analyzeImage(uri, {
-        // Use simulation if models aren't fully loaded
-        useSimulation: false,
-      });
+      // Use on-device analysis (models required)
+      const result = await analyzeImage(uri);
       
       setAnalysisResult(result);
       setConfidence(result.fusedScore);
