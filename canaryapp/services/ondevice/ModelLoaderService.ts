@@ -21,7 +21,7 @@ const MODEL_CACHE_DIR = `${FileSystem.documentDirectory}models/`;
 // Model file hashes for integrity verification (to be updated with actual hashes)
 const MODEL_HASHES: Record<string, string> = {
   'mobilenet_v3_scam_detect.tflite': 'placeholder_hash_visual',
-  'mobilebert_scam_intent.tflite': 'placeholder_hash_text',
+  'mobilebert_scam_intent.tflite': 'f71f1c5edb98c9ec1636e1b1cc4fdf89a1f72cde04a69effc3624f1c0fadf1ab',
 };
 
 // Singleton instances
