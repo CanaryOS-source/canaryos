@@ -4,11 +4,17 @@
  * 
  * Coordinates:
  * 1. OCR text extraction
- * 2. Visual classification
- * 3. Text classification  
+ * 2. Visual classification (OPTIONAL - system works without it)
+ * 3. Text classification (REQUIRED)
  * 4. Score fusion
  * 
  * Privacy: All processing happens on-device. No data leaves the device.
+ * 
+ * OPERATION MODES:
+ * - Full Mode: Both visual and text models loaded (best accuracy)
+ * - Text-Only Mode: Only text model loaded (still effective for most scams)
+ * 
+ * @see docs/VISUAL_CLASSIFIER_INTEGRATION.md for future visual model integration
  */
 
 import { Platform } from 'react-native';
@@ -21,8 +27,11 @@ import {
 
 // Import services
 import { 
-  loadAllModels, 
+  loadAllModels,
+  loadTextModelOnly,
   isReady,
+  isTextModelReady,
+  isVisualModelReady,
   isFullyLoaded,
   getLoadState,
   unloadModels,
@@ -39,18 +48,23 @@ import {
   classify as classifyText,
   quickScamCheck,
 } from './TextClassifierService';
+import { loadVocabulary } from './TextTokenizer';
 import { fuseResults } from './FusionEngine';
 
 // Service state
 let isInitialized = false;
 let initializationPromise: Promise<void> | null = null;
+let isTextOnlyMode = false;
 
 /**
  * Initialize the on-device analysis system
  * Loads models and prepares services
  * 
- * IMPORTANT: Models MUST be loaded successfully for analysis to work.
- * Ensure .tflite files are placed in assets/models/ before calling this.
+ * IMPORTANT: 
+ * - Text model (MobileBERT) is REQUIRED for analysis
+ * - Visual model (MobileNetV3) is OPTIONAL - system works without it
+ * 
+ * If visual model is unavailable, system runs in text-only mode.
  */
 export async function initialize(): Promise<void> {
   if (isInitialized) {
@@ -67,23 +81,35 @@ export async function initialize(): Promise<void> {
   
   initializationPromise = (async () => {
     try {
-      // Load models in parallel
-      const { visual, text, errors } = await loadAllModels();
+      // Load vocabulary first (required for text tokenization)
+      console.log('[OnDeviceAnalyzer] Loading vocabulary...');
+      await loadVocabulary();
       
-      if (errors.length > 0) {
-        console.error('[OnDeviceAnalyzer] Model loading errors:', errors);
-        throw new Error(`Failed to load models: ${errors.join('; ')}`);
+      // Load models in parallel
+      console.log('[OnDeviceAnalyzer] Loading models...');
+      const { visual, text, errors, isTextReady, isVisualReady } = await loadAllModels();
+      
+      // Text model is REQUIRED
+      if (!text || !isTextReady) {
+        throw new Error('Text model failed to load - ensure mobilebert_scam_intent.tflite is in assets/models/');
       }
       
-      if (!visual || !text) {
-        throw new Error('Models failed to load - ensure .tflite files are in assets/models/');
+      // Visual model is OPTIONAL
+      if (!visual || !isVisualReady) {
+        isTextOnlyMode = true;
+        console.warn('[OnDeviceAnalyzer] Running in TEXT-ONLY mode (visual model unavailable)');
+        console.warn('[OnDeviceAnalyzer] Text analysis is still fully functional');
+      } else {
+        isTextOnlyMode = false;
+        console.log('[OnDeviceAnalyzer] Visual model loaded - full analysis available');
       }
       
       isInitialized = true;
-      console.log('[OnDeviceAnalyzer] Initialization complete');
-      console.log(`[OnDeviceAnalyzer] Visual model: loaded`);
-      console.log(`[OnDeviceAnalyzer] Text model: loaded`);
+      
+      console.log('[OnDeviceAnalyzer] ✓ Initialization complete');
+      console.log(`[OnDeviceAnalyzer] Mode: ${isTextOnlyMode ? 'TEXT-ONLY' : 'FULL (Visual + Text)'}`);
       console.log(`[OnDeviceAnalyzer] OCR: ${isOCRAvailable() ? 'available' : 'unavailable'}`);
+      
     } catch (error) {
       console.error('[OnDeviceAnalyzer] Initialization failed:', error);
       initializationPromise = null;
@@ -108,14 +134,26 @@ export function getStatus(): OnDeviceServiceStatus {
     textModelStatus: loadState.text,
     ocrAvailable: isOCRAvailable(),
     lastError: loadState.visual.error?.message || loadState.text.error?.message || null,
+    isTextOnlyMode,
   };
+}
+
+/**
+ * Check if running in text-only mode (visual model unavailable)
+ */
+export function isRunningTextOnlyMode(): boolean {
+  return isTextOnlyMode;
 }
 
 /**
  * Analyze an image for scam content
  * This is the main entry point for on-device scam detection.
  * 
- * REQUIRES: Models must be loaded via initialize() before calling this.
+ * OPERATION MODES:
+ * - If visual model is loaded: Performs full visual + text analysis
+ * - If text-only mode: Uses OCR to extract text, then analyzes with text model
+ * 
+ * REQUIRES: Text model must be loaded via initialize()
  * 
  * @param imageUri - Local URI of the image to analyze
  * @param options - Analysis options
@@ -124,33 +162,38 @@ export async function analyzeImage(
   imageUri: string,
   options: {
     skipOCR?: boolean; // Skip text extraction
-    skipVisual?: boolean; // Skip visual analysis
+    skipVisual?: boolean; // Skip visual analysis (or force text-only)
   } = {}
 ): Promise<OnDeviceAnalysisResult> {
   const startTime = Date.now();
   
   console.log(`[OnDeviceAnalyzer] Analyzing image: ${imageUri}`);
   
-  // Ensure initialized with models loaded
-  if (!isInitialized || !isFullyLoaded()) {
-    throw new Error('On-device analyzer not initialized. Call initialize() first and ensure models are loaded.');
+  // Ensure initialized with at least text model
+  if (!isInitialized || !isTextModelReady()) {
+    throw new Error('On-device analyzer not initialized. Call initialize() first.');
   }
   
   // Run analysis tasks in parallel
   const tasks: Promise<any>[] = [];
   
-  // Visual classification
-  if (!options.skipVisual) {
+  // Visual classification (only if visual model is available and not skipped)
+  const shouldDoVisual = !options.skipVisual && !isTextOnlyMode && isVisualModelReady();
+  
+  if (shouldDoVisual) {
     tasks.push(classifyVisual(imageUri));
   } else {
     tasks.push(Promise.resolve(null));
+    if (!options.skipVisual && isTextOnlyMode) {
+      console.log('[OnDeviceAnalyzer] Skipping visual analysis (text-only mode)');
+    }
   }
   
-  // OCR + Text classification
+  // OCR + Text classification (primary analysis path)
   if (!options.skipOCR && isOCRAvailable()) {
     tasks.push(
       (async () => {
-        // Extract text
+        // Extract text from image
         const ocrResult = await extractText(imageUri);
         
         if (!ocrResult.text || ocrResult.text.trim().length === 0) {
@@ -161,7 +204,7 @@ export async function analyzeImage(
         const normalizedText = normalizeText(ocrResult.text);
         console.log(`[OnDeviceAnalyzer] Extracted ${normalizedText.length} chars of text`);
         
-        // Classify text
+        // Classify the extracted text
         return classifyText(normalizedText);
       })()
     );
@@ -176,10 +219,17 @@ export async function analyzeImage(
     TextAnalysisResult | null
   ];
   
-  // Fuse results
+  // Log analysis status
+  if (isTextOnlyMode) {
+    console.log('[OnDeviceAnalyzer] Analysis: TEXT-ONLY mode');
+  } else {
+    console.log(`[OnDeviceAnalyzer] Analysis: Visual=${visualResult ? 'yes' : 'no'}, Text=${textResult ? 'yes' : 'no'}`);
+  }
+  
+  // Fuse results (handles null visual result gracefully)
   const fusedResult = fuseResults(visualResult, textResult);
   
-  // Add total latency including overhead
+  // Add metadata
   fusedResult.totalLatencyMs = Date.now() - startTime;
   
   console.log(`[OnDeviceAnalyzer] Analysis complete in ${fusedResult.totalLatencyMs}ms`);
@@ -192,7 +242,7 @@ export async function analyzeImage(
  * Analyze text directly (without image)
  * Useful for analyzing copied text or direct input
  * 
- * REQUIRES: Models must be loaded via initialize() before calling this.
+ * REQUIRES: Text model must be loaded via initialize()
  */
 export async function analyzeText(text: string): Promise<OnDeviceAnalysisResult> {
   const startTime = Date.now();
@@ -217,9 +267,9 @@ export async function analyzeText(text: string): Promise<OnDeviceAnalysisResult>
     };
   }
   
-  // Ensure initialized with models loaded
-  if (!isInitialized || !isFullyLoaded()) {
-    throw new Error('On-device analyzer not initialized. Call initialize() first and ensure models are loaded.');
+  // Ensure initialized with text model
+  if (!isInitialized || !isTextModelReady()) {
+    throw new Error('On-device analyzer not initialized. Call initialize() first.');
   }
   
   console.log(`[OnDeviceAnalyzer] Analyzing text (${text.length} chars)`);
@@ -232,7 +282,7 @@ export async function analyzeText(text: string): Promise<OnDeviceAnalysisResult>
   // Run text classification
   const textResult = await classifyText(text);
   
-  // Fuse with null visual result
+  // Fuse with null visual result (text-only analysis)
   const fusedResult = fuseResults(null, textResult);
   fusedResult.totalLatencyMs = Date.now() - startTime;
   
@@ -243,9 +293,11 @@ export async function analyzeText(text: string): Promise<OnDeviceAnalysisResult>
 
 /**
  * Quick analysis for real-time feedback
- * Returns basic risk assessment with minimal latency
+ * Uses only visual classification for fastest results
  * 
- * REQUIRES: Models must be loaded via initialize() before calling this.
+ * NOTE: In text-only mode, this falls back to heuristic-only analysis
+ * 
+ * @param imageUri - Local URI of the image
  */
 export async function quickAnalyze(imageUri: string): Promise<{
   isScam: boolean;
@@ -254,32 +306,55 @@ export async function quickAnalyze(imageUri: string): Promise<{
 }> {
   const startTime = Date.now();
   
-  // Ensure initialized with models loaded
-  if (!isInitialized || !isFullyLoaded()) {
-    throw new Error('On-device analyzer not initialized. Call initialize() first and ensure models are loaded.');
+  // Ensure initialized
+  if (!isInitialized || !isTextModelReady()) {
+    throw new Error('On-device analyzer not initialized. Call initialize() first.');
   }
   
-  // Use visual classification for quick results
-  const visualResult = await classifyVisual(imageUri);
+  // If visual model is available, use it for quick analysis
+  if (!isTextOnlyMode && isVisualModelReady()) {
+    const visualResult = await classifyVisual(imageUri);
+    
+    return {
+      isScam: visualResult.confidence > 0.5 && visualResult.category !== 'safe',
+      score: visualResult.confidence,
+      latencyMs: Date.now() - startTime,
+    };
+  }
   
+  // Text-only fallback: extract text and do quick heuristic check
+  console.log('[OnDeviceAnalyzer] Quick analyze: text-only fallback');
+  
+  if (isOCRAvailable()) {
+    const ocrResult = await extractText(imageUri);
+    if (ocrResult.text && ocrResult.text.length > 0) {
+      const isQuickScam = quickScamCheck(ocrResult.text);
+      return {
+        isScam: isQuickScam,
+        score: isQuickScam ? 0.8 : 0.2,
+        latencyMs: Date.now() - startTime,
+      };
+    }
+  }
+  
+  // No analysis possible
   return {
-    isScam: visualResult.confidence > 0.5 && 
-            visualResult.category !== 'safe',
-    score: visualResult.confidence,
+    isScam: false,
+    score: 0,
     latencyMs: Date.now() - startTime,
   };
 }
 
 /**
  * Check if on-device analysis is available
- * Returns true only on native platforms with models loaded
+ * Returns true on native platforms with at least text model loaded
  */
 export function isAvailable(): boolean {
   // On web, on-device analysis is not available
   if (Platform.OS === 'web') return false;
   
-  // Must be initialized with models loaded
-  return isInitialized && isFullyLoaded();
+  // Requires at least text model to be initialized
+  return isInitialized && isTextModelReady();
 }
 
 /**
@@ -288,6 +363,7 @@ export function isAvailable(): boolean {
 export function cleanup(): void {
   unloadModels();
   isInitialized = false;
+  isTextOnlyMode = false;
   console.log('[OnDeviceAnalyzer] Cleaned up');
 }
 

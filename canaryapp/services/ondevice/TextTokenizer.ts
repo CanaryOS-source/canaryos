@@ -1,122 +1,165 @@
 /**
  * Text Tokenizer Service
- * Implements WordPiece tokenization for MobileBERT/BERT models
+ * Implements WordPiece tokenization for MobileBERT model
  * 
- * This is a lightweight JavaScript implementation suitable for mobile
- * For sequences under 512 tokens, JS performance is acceptable
+ * This tokenizer loads the full vocab.txt (30,522 tokens) from bundled assets
+ * and performs proper WordPiece tokenization compatible with MobileBERT.
+ * 
+ * @see assets/models/vocab.txt - Full vocabulary file
+ * @see assets/models/README.md - Model specifications
  */
 
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import { DEFAULT_MODEL_CONFIG } from './types';
 
-// Special tokens
+// Special tokens (standard BERT vocabulary positions)
 const PAD_TOKEN = '[PAD]';
 const UNK_TOKEN = '[UNK]';
 const CLS_TOKEN = '[CLS]';
 const SEP_TOKEN = '[SEP]';
+const MASK_TOKEN = '[MASK]';
 
 const PAD_ID = 0;
 const UNK_ID = 100;
 const CLS_ID = 101;
 const SEP_ID = 102;
+const MASK_ID = 103;
 
-// Common vocabulary subset for scam detection
-// In production, load the full vocab.txt from assets
-// This is a minimal vocab - expand with full WordPiece vocabulary
-const BASIC_VOCAB: Map<string, number> = new Map([
-  [PAD_TOKEN, PAD_ID],
-  [UNK_TOKEN, UNK_ID],
-  [CLS_TOKEN, CLS_ID],
-  [SEP_TOKEN, SEP_ID],
-  // Common words for scam detection
-  ['urgent', 103],
-  ['immediately', 104],
-  ['account', 105],
-  ['suspended', 106],
-  ['verify', 107],
-  ['click', 108],
-  ['link', 109],
-  ['password', 110],
-  ['bank', 111],
-  ['money', 112],
-  ['transfer', 113],
-  ['wire', 114],
-  ['prize', 115],
-  ['winner', 116],
-  ['congratulations', 117],
-  ['lottery', 118],
-  ['free', 119],
-  ['offer', 120],
-  ['limited', 121],
-  ['time', 122],
-  ['act', 123],
-  ['now', 124],
-  ['expire', 125],
-  ['confirm', 126],
-  ['security', 127],
-  ['alert', 128],
-  ['warning', 129],
-  ['suspended', 130],
-  ['locked', 131],
-  ['login', 132],
-  ['credential', 133],
-  ['update', 134],
-  ['information', 135],
-  ['personal', 136],
-  ['social', 137],
-  ['ssn', 138],
-  ['credit', 139],
-  ['card', 140],
-  ['payment', 141],
-  ['invoice', 142],
-  ['due', 143],
-  ['overdue', 144],
-  ['tax', 145],
-  ['irs', 146],
-  ['government', 147],
-  ['legal', 148],
-  ['action', 149],
-  ['arrest', 150],
-  ['police', 151],
-  ['lawsuit', 152],
-  ['gift', 153],
-  ['reward', 154],
-  ['claim', 155],
-  ['selected', 156],
-  ['exclusive', 157],
-  ['deal', 158],
-  ['discount', 159],
-  ['bitcoin', 160],
-  ['crypto', 161],
-  ['investment', 162],
-  ['profit', 163],
-  ['guaranteed', 164],
-  ['return', 165],
-  ['inherit', 166],
-  ['prince', 167],
-  ['nigeria', 168],
-  ['million', 169],
-  ['dollars', 170],
-]);
-
-// Full vocabulary will be loaded dynamically
-let fullVocab: Map<string, number> | null = null;
+// Vocabulary state
+let vocabulary: Map<string, number> | null = null;
+let reverseVocabulary: Map<number, string> | null = null;
+let isVocabLoading = false;
+let vocabLoadPromise: Promise<void> | null = null;
 
 /**
- * Load vocabulary from vocab.txt file
- * Currently uses basic vocabulary - expand for production
+ * Load vocabulary from bundled vocab.txt asset
+ * This loads the full 30,522 token MobileBERT vocabulary
  */
-export async function loadVocabulary(vocabPath?: string): Promise<void> {
-  // TODO: Load full vocabulary from vocabPath asset
-  // Currently using basic vocab
-  fullVocab = BASIC_VOCAB;
-  console.log(`[Tokenizer] Loaded vocabulary with ${fullVocab.size} tokens`);
+export async function loadVocabulary(): Promise<void> {
+  // Return if already loaded with full vocabulary
+  if (vocabulary && vocabulary.size > 1000) {
+    console.log('[Tokenizer] Vocabulary already loaded');
+    return;
+  }
+
+  // Wait for existing load if in progress
+  if (isVocabLoading && vocabLoadPromise) {
+    console.log('[Tokenizer] Waiting for vocabulary load in progress...');
+    return vocabLoadPromise;
+  }
+
+  isVocabLoading = true;
+  
+  vocabLoadPromise = (async () => {
+    try {
+      console.log('[Tokenizer] Loading vocabulary from bundled assets...');
+      
+      // Load vocab.txt from bundled assets
+      const asset = Asset.fromModule(require('../../assets/models/vocab.txt'));
+      await asset.downloadAsync();
+      
+      if (!asset.localUri) {
+        throw new Error('Failed to resolve vocab.txt asset URI');
+      }
+      
+      // Read the vocabulary file
+      const vocabContent = await FileSystem.readAsStringAsync(asset.localUri);
+      const lines = vocabContent.split('\n');
+      
+      // Build vocabulary maps
+      vocabulary = new Map();
+      reverseVocabulary = new Map();
+      
+      for (let i = 0; i < lines.length; i++) {
+        const token = lines[i].trim();
+        if (token.length > 0) {
+          vocabulary.set(token, i);
+          reverseVocabulary.set(i, token);
+        }
+      }
+      
+      console.log(`[Tokenizer] ✓ Loaded vocabulary with ${vocabulary.size} tokens`);
+      
+      // Verify special tokens are present
+      if (!vocabulary.has(CLS_TOKEN) || !vocabulary.has(SEP_TOKEN)) {
+        console.warn('[Tokenizer] Warning: Special tokens may be missing from vocabulary');
+      }
+      
+    } catch (error) {
+      console.error('[Tokenizer] Failed to load vocabulary:', error);
+      // Initialize with fallback minimal vocabulary for basic operation
+      initializeFallbackVocabulary();
+    } finally {
+      isVocabLoading = false;
+      vocabLoadPromise = null;
+    }
+  })();
+  
+  return vocabLoadPromise;
 }
 
 /**
- * Get the current vocabulary
+ * Initialize fallback vocabulary if vocab.txt fails to load
+ * This provides basic functionality but with reduced accuracy
+ */
+function initializeFallbackVocabulary(): void {
+  console.warn('[Tokenizer] Using fallback vocabulary - reduced accuracy');
+  
+  const fallbackVocab = new Map<string, number>([
+    [PAD_TOKEN, PAD_ID],
+    [UNK_TOKEN, UNK_ID],
+    [CLS_TOKEN, CLS_ID],
+    [SEP_TOKEN, SEP_ID],
+    [MASK_TOKEN, MASK_ID],
+  ]);
+  
+  // Add basic ASCII characters and common tokens
+  let idx = 104;
+  
+  // Lowercase letters
+  for (let c = 97; c <= 122; c++) {
+    fallbackVocab.set(String.fromCharCode(c), idx++);
+  }
+  
+  // Digits
+  for (let d = 0; d <= 9; d++) {
+    fallbackVocab.set(String(d), idx++);
+  }
+  
+  // Common punctuation
+  ['.', ',', '!', '?', ':', ';', '-', '_', '(', ')', '[', ']', '{', '}', '"', "'", '/', '\\', '@', '#', '$', '%', '&', '*', '+', '='].forEach(p => {
+    fallbackVocab.set(p, idx++);
+  });
+  
+  vocabulary = fallbackVocab;
+  reverseVocabulary = new Map();
+  vocabulary.forEach((id, token) => reverseVocabulary!.set(id, token));
+}
+
+/**
+ * Get vocabulary synchronously (for use after initial load)
  */
 function getVocab(): Map<string, number> {
-  return fullVocab || BASIC_VOCAB;
+  if (!vocabulary) {
+    console.warn('[Tokenizer] Vocabulary not loaded, using fallback');
+    initializeFallbackVocabulary();
+  }
+  return vocabulary!;
+}
+
+/**
+ * Check if vocabulary is loaded with full vocab
+ */
+export function isVocabularyLoaded(): boolean {
+  return vocabulary !== null && vocabulary.size > 1000;
+}
+
+/**
+ * Get vocabulary size
+ */
+export function getVocabularySize(): number {
+  return vocabulary?.size || 0;
 }
 
 /**
@@ -124,35 +167,29 @@ function getVocab(): Map<string, number> {
  * Handles Unicode normalization and homoglyph detection
  */
 export function normalizeForTokenization(text: string): string {
-  // Convert to lowercase
+  // Convert to lowercase (MobileBERT uncased model)
   let normalized = text.toLowerCase();
   
   // Normalize Unicode (NFC form)
   normalized = normalized.normalize('NFC');
   
-  // Handle common homoglyph attacks (Cyrillic characters that look like Latin)
+  // Handle common homoglyph attacks (Cyrillic/Greek chars that look like Latin)
   const homoglyphMap: Record<string, string> = {
-    'а': 'a', // Cyrillic а -> Latin a
-    'е': 'e', // Cyrillic е -> Latin e
-    'о': 'o', // Cyrillic о -> Latin o
-    'р': 'p', // Cyrillic р -> Latin p
-    'с': 'c', // Cyrillic с -> Latin c
-    'у': 'y', // Cyrillic у -> Latin y
-    'х': 'x', // Cyrillic х -> Latin x
-    'ѕ': 's', // Cyrillic ѕ -> Latin s
-    'і': 'i', // Cyrillic і -> Latin i
-    'ј': 'j', // Cyrillic ј -> Latin j
+    // Cyrillic homoglyphs
+    'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c',
+    'у': 'y', 'х': 'x', 'ѕ': 's', 'і': 'i', 'ј': 'j',
+    'ԁ': 'd', 'һ': 'h', 'ԝ': 'w', 'ʏ': 'y',
     // Greek homoglyphs
-    'α': 'a',
-    'ο': 'o',
-    'ρ': 'p',
+    'α': 'a', 'ο': 'o', 'ρ': 'p', 'τ': 't', 'ν': 'v',
+    // Zero-width characters (remove completely)
+    '\u200b': '', '\u200c': '', '\u200d': '', '\ufeff': '',
   };
   
   for (const [homoglyph, replacement] of Object.entries(homoglyphMap)) {
     normalized = normalized.replace(new RegExp(homoglyph, 'g'), replacement);
   }
   
-  // Remove excessive whitespace
+  // Normalize whitespace
   normalized = normalized.replace(/\s+/g, ' ').trim();
   
   return normalized;
@@ -172,33 +209,59 @@ export function detectHomoglyphs(text: string): boolean {
   const hasGreek = greekPattern.test(text);
   const hasLatin = latinPattern.test(text);
   
-  // Suspicious if mixed scripts
-  return (hasCyrillic || hasGreek) && hasLatin;
+  // Check for zero-width characters
+  const hasZeroWidth = /[\u200b\u200c\u200d\ufeff]/.test(text);
+  
+  // Suspicious if mixed scripts or zero-width chars
+  return ((hasCyrillic || hasGreek) && hasLatin) || hasZeroWidth;
 }
 
 /**
- * Basic word tokenization
+ * Basic whitespace tokenization
+ * Splits on whitespace and separates punctuation
  */
-function basicTokenize(text: string): string[] {
-  // Split on whitespace and punctuation while keeping punctuation as separate tokens
-  return text
-    .split(/(\s+|[.,!?;:'"()\[\]{}])/g)
-    .filter(token => token.trim().length > 0);
+function whitespaceTokenize(text: string): string[] {
+  const tokens: string[] = [];
+  
+  // Split on whitespace first
+  const words = text.split(/\s+/);
+  
+  for (const word of words) {
+    if (word.length === 0) continue;
+    
+    // Separate punctuation from words
+    let current = '';
+    for (const char of word) {
+      if (/[.,!?;:'"()\[\]{}<>@#$%^&*+=\-_/\\|`~]/.test(char)) {
+        if (current.length > 0) {
+          tokens.push(current);
+          current = '';
+        }
+        tokens.push(char);
+      } else {
+        current += char;
+      }
+    }
+    if (current.length > 0) {
+      tokens.push(current);
+    }
+  }
+  
+  return tokens;
 }
 
 /**
  * WordPiece tokenization
- * Breaks unknown words into subword units
+ * Breaks unknown words into subword units using ## prefix
  */
 function wordPieceTokenize(word: string): string[] {
   const vocab = getVocab();
   
-  // Check if word is in vocabulary
+  // Check if whole word is in vocabulary
   if (vocab.has(word)) {
     return [word];
   }
   
-  // Try to break into subwords
   const tokens: string[] = [];
   let start = 0;
   
@@ -206,23 +269,32 @@ function wordPieceTokenize(word: string): string[] {
     let end = word.length;
     let foundSubword = false;
     
+    // Try to find longest matching subword
     while (start < end) {
-      const substr = start === 0 ? word.slice(start, end) : `##${word.slice(start, end)}`;
+      let substr = word.slice(start, end);
+      
+      // Add ## prefix for continuation subwords
+      if (start > 0) {
+        substr = '##' + substr;
+      }
       
       if (vocab.has(substr)) {
         tokens.push(substr);
         foundSubword = true;
+        start = end;
         break;
       }
+      
       end -= 1;
     }
     
+    // If no subword found, mark as unknown and advance
     if (!foundSubword) {
-      // If no subword found, use UNK
-      tokens.push(UNK_TOKEN);
+      // Only add [UNK] once per unknown character sequence
+      if (tokens.length === 0 || tokens[tokens.length - 1] !== UNK_TOKEN) {
+        tokens.push(UNK_TOKEN);
+      }
       start += 1;
-    } else {
-      start = end;
     }
   }
   
@@ -231,14 +303,15 @@ function wordPieceTokenize(word: string): string[] {
 
 /**
  * Full tokenization pipeline
+ * Returns array of tokens with [CLS] and [SEP] markers
  */
 export function tokenize(text: string): string[] {
   const normalized = normalizeForTokenization(text);
-  const basicTokens = basicTokenize(normalized);
+  const words = whitespaceTokenize(normalized);
   
   const tokens: string[] = [CLS_TOKEN];
   
-  for (const word of basicTokens) {
+  for (const word of words) {
     const subwords = wordPieceTokenize(word);
     tokens.push(...subwords);
   }
@@ -261,8 +334,23 @@ export function tokensToIds(tokens: string[]): number[] {
 }
 
 /**
- * Tokenize and convert to model input format
- * Returns padded/truncated tensor-ready input
+ * Convert token IDs back to tokens (for debugging)
+ */
+export function idsToTokens(ids: number[]): string[] {
+  if (!reverseVocabulary) {
+    return ids.map(() => UNK_TOKEN);
+  }
+  
+  return ids.map(id => reverseVocabulary!.get(id) || UNK_TOKEN);
+}
+
+/**
+ * Tokenize and encode text for model input
+ * Returns padded/truncated Int32Array ready for TFLite inference
+ * 
+ * @param text - Input text to encode
+ * @param maxLength - Maximum sequence length (default 128 per model spec)
+ * @returns Object with inputIds tensor and metadata
  */
 export function encodeForModel(
   text: string,
@@ -276,18 +364,26 @@ export function encodeForModel(
   const inputIds = new Int32Array(maxLength);
   const attentionMask = new Int32Array(maxLength);
   
-  // Fill with padding
+  // Initialize with padding
   inputIds.fill(PAD_ID);
   attentionMask.fill(0);
   
-  // Truncate if necessary
-  const truncatedTokens = tokens.slice(0, maxLength);
+  // Truncate if necessary (keep [CLS] at start and [SEP] at end)
+  let truncatedTokens: string[];
+  if (tokens.length > maxLength) {
+    // Keep first (maxLength-1) tokens and add [SEP] at end
+    truncatedTokens = [...tokens.slice(0, maxLength - 1), SEP_TOKEN];
+  } else {
+    truncatedTokens = tokens;
+  }
+  
+  // Convert to IDs
   const ids = tokensToIds(truncatedTokens);
   
-  // Copy token IDs
+  // Copy token IDs and set attention mask
   for (let i = 0; i < ids.length; i++) {
     inputIds[i] = ids[i];
-    attentionMask[i] = 1;
+    attentionMask[i] = 1; // 1 for real tokens, 0 for padding
   }
   
   return {
@@ -298,7 +394,7 @@ export function encodeForModel(
 }
 
 /**
- * Batch encode multiple texts
+ * Batch encode multiple texts (for future batch inference)
  */
 export function batchEncode(
   texts: string[],
@@ -317,5 +413,24 @@ export function batchEncode(
   };
 }
 
-// Initialize vocabulary on module load
-loadVocabulary();
+/**
+ * Debug helper: show tokenization breakdown
+ */
+export function debugTokenize(text: string): void {
+  console.log('[Tokenizer Debug]');
+  console.log(`  Original: "${text}"`);
+  console.log(`  Normalized: "${normalizeForTokenization(text)}"`);
+  
+  const tokens = tokenize(text);
+  console.log(`  Tokens (${tokens.length}): ${tokens.join(' | ')}`);
+  
+  const ids = tokensToIds(tokens);
+  console.log(`  IDs: [${ids.join(', ')}]`);
+  
+  if (detectHomoglyphs(text)) {
+    console.log('  ⚠️ Homoglyph attack detected!');
+  }
+}
+
+// Note: Vocabulary is loaded lazily when first needed
+// Call loadVocabulary() during app initialization for faster first inference

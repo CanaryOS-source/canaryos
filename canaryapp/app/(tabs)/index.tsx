@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   useColorScheme,
   TextInput,
   Keyboard,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,6 +19,15 @@ import { analyzeImageForScam, analyzeTextForScam, analyzeAudioForScam, ScamAnaly
 import { Colors, CanaryColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { recordScan } from '@/services/analyticsService';
+import {
+  initialize as initializeOnDevice,
+  analyzeImage as analyzeImageOnDevice,
+  getStatus as getOnDeviceStatus,
+  isAvailable as isOnDeviceAvailable,
+  isRunningTextOnlyMode,
+  OnDeviceAnalysisResult,
+} from '@/services/ondevice';
+import { classifyWithModel } from '@/services/ondevice/TextClassifierService';
 
 export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -25,12 +35,53 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<ScamAnalysisResult | null>(null);
+  // On-device analysis state
+  const [onDeviceAnalysis, setOnDeviceAnalysis] = useState<OnDeviceAnalysisResult | null>(null);
+  const [isOnDeviceReady, setIsOnDeviceReady] = useState(false);
+  const [isOnDeviceMode, setIsOnDeviceMode] = useState(false);
+  const [isTextOnlyMode, setIsTextOnlyMode] = useState(false);
+  const [onDeviceInitializing, setOnDeviceInitializing] = useState(false);
+  
+  // Debug text model state
+  const [debugText, setDebugText] = useState<string>('');
+  const [debugModelScore, setDebugModelScore] = useState<number | null>(null);
+  const [debugTesting, setDebugTesting] = useState(false);
+  
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { user } = useAuth();
 
+  // Initialize on-device analysis on mount (native platforms only)
+  useEffect(() => {
+    const initOnDevice = async () => {
+      if (Platform.OS === 'web') {
+        console.log('[HomeScreen] Web platform - on-device analysis unavailable');
+        return;
+      }
+
+      setOnDeviceInitializing(true);
+      try {
+        console.log('[HomeScreen] Initializing on-device analysis...');
+        await initializeOnDevice();
+        const status = getOnDeviceStatus();
+        const textOnly = isRunningTextOnlyMode();
+        setIsOnDeviceReady(status.isAvailable);
+        setIsTextOnlyMode(textOnly);
+        console.log('[HomeScreen] On-device ready:', status.isAvailable, 'Mode:', textOnly ? 'TEXT-ONLY' : 'FULL');
+      } catch (error) {
+        console.error('[HomeScreen] On-device initialization failed:', error);
+        setIsOnDeviceReady(false);
+      } finally {
+        setOnDeviceInitializing(false);
+      }
+    };
+
+    initOnDevice();
+  }, []);
+
   const pickImage = async () => {
     try {
+      setIsOnDeviceMode(false); // Using Gemini
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
@@ -52,6 +103,7 @@ export default function HomeScreen() {
         const asset = result.assets[0];
         setSelectedImage(asset.uri);
         setAnalysis(null);
+        setOnDeviceAnalysis(null);
         
         if (asset.base64) {
           await analyzeImage(asset.base64);
@@ -60,6 +112,117 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  /**
+   * Pick image for ON-DEVICE analysis (no cloud API calls)
+   * Uses MobileBERT + OCR for scam detection
+   */
+  const pickImageOnDevice = async () => {
+    try {
+      setIsOnDeviceMode(true);
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant permission to access your photos to analyze screenshots.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1.0, // Higher quality for OCR
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setSelectedImage(asset.uri);
+        setAnalysis(null);
+        setOnDeviceAnalysis(null);
+        
+        // Analyze with on-device model
+        await analyzeImageWithOnDevice(asset.uri);
+      }
+    } catch (error) {
+      console.error('Error picking image for on-device:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  /**
+   * Analyze image using on-device TFLite model
+   */
+  const analyzeImageWithOnDevice = async (imageUri: string) => {
+    setIsAnalyzing(true);
+    try {
+      console.log('[HomeScreen] Starting on-device analysis...');
+      const result = await analyzeImageOnDevice(imageUri);
+      setOnDeviceAnalysis(result);
+      
+      // Track analytics
+      if (user?.uid) {
+        try {
+          await recordScan(user.uid, result.isScam);
+        } catch (analyticsError) {
+          console.error('Error tracking analytics:', analyticsError);
+        }
+      }
+      
+      console.log('[HomeScreen] On-device analysis complete:', result.isScam ? 'SCAM' : 'SAFE');
+    } catch (error) {
+      console.error('On-device analysis error:', error);
+      Alert.alert(
+        'Analysis Failed',
+        'On-device analysis failed. Please ensure models are properly loaded and try again.'
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  /**
+   * DEBUG: Test text model directly with raw input
+   * This bypasses OCR and tests the MobileBERT model's inference
+   */
+  const testTextModelDirectly = async () => {
+    if (!debugText.trim()) {
+      Alert.alert('Input Required', 'Please enter text to test the model.');
+      return;
+    }
+
+    setDebugTesting(true);
+    setDebugModelScore(null);
+
+    try {
+      console.log('[DEBUG] Testing text model with input:', debugText);
+      console.log('[DEBUG] Input length:', debugText.length, 'chars');
+      
+      // Call the model directly
+      const rawScore = await classifyWithModel(debugText);
+      
+      console.log('[DEBUG] Raw model output (risk score):', rawScore);
+      console.log('[DEBUG] As percentage:', (rawScore * 100).toFixed(2) + '%');
+      
+      setDebugModelScore(rawScore);
+      
+      if (rawScore < 0) {
+        Alert.alert(
+          'Model Error',
+          'Text model inference failed. Model may not be loaded properly.'
+        );
+      }
+    } catch (error) {
+      console.error('[DEBUG] Model test error:', error);
+      Alert.alert(
+        'Test Failed',
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setDebugTesting(false);
     }
   };
 
@@ -174,6 +337,8 @@ export default function HomeScreen() {
     setSelectedAudio(null);
     setSearchQuery('');
     setAnalysis(null);
+    setOnDeviceAnalysis(null);
+    setIsOnDeviceMode(false);
   };
 
   return (
@@ -195,7 +360,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Main Action Buttons */}
-      {!selectedImage && !selectedAudio && !analysis && (
+      {!selectedImage && !selectedAudio && !analysis && !onDeviceAnalysis && (
         <>
           <TouchableOpacity
             style={[styles.uploadButton, { backgroundColor: CanaryColors.primary }]}
@@ -204,6 +369,33 @@ export default function HomeScreen() {
           >
             <Text style={styles.uploadButtonText}>Upload Screenshot</Text>
           </TouchableOpacity>
+
+          {/* On-Device Upload Button - Only on native platforms */}
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity
+              style={[
+                styles.uploadButton, 
+                { 
+                  backgroundColor: isOnDeviceReady ? CanaryColors.primary : colors.border,
+                  marginTop: 12,
+                }
+              ]}
+              onPress={pickImageOnDevice}
+              activeOpacity={0.8}
+              disabled={!isOnDeviceReady || onDeviceInitializing}
+            >
+              <Text style={[
+                styles.uploadButtonText,
+                !isOnDeviceReady && { color: colors.icon }
+              ]}>
+                {onDeviceInitializing 
+                  ? 'Initializing On-Device AI...' 
+                  : isOnDeviceReady 
+                    ? `Upload Screenshot (On-Device${isTextOnlyMode ? ' - Text AI' : ''})` 
+                    : 'On-Device Unavailable'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Divider */}
           <View style={styles.dividerContainer}>
@@ -256,6 +448,78 @@ export default function HomeScreen() {
               <Text style={styles.searchButtonText}>Analyze</Text>
             </TouchableOpacity>
           </View>
+
+          {/* DEBUG: Direct Text Model Testing - Only on native platforms */}
+          {Platform.OS !== 'web' && isOnDeviceReady && (
+            <>
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.dividerText, { color: colors.icon }]}>DEBUG</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              </View>
+
+              <View style={[styles.debugSection, { backgroundColor: colors.card }]}>
+                <Text style={[styles.debugTitle, { color: colors.text }]}>
+                  🔬 Test Text Model Directly
+                </Text>
+                <Text style={[styles.debugSubtitle, { color: colors.icon }]}>
+                  Get raw risk score (0-1) from MobileBERT model{'\n'}
+                  Try: "URGENT! Wire $500 now or account suspended!"
+                </Text>
+                
+                <TextInput
+                  style={[styles.debugInput, { 
+                    backgroundColor: colors.background, 
+                    color: colors.text,
+                    borderColor: colors.border 
+                  }]}
+                  placeholder="Enter text to test the model..."
+                  placeholderTextColor={colors.icon}
+                  value={debugText}
+                  onChangeText={setDebugText}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                
+                <TouchableOpacity
+                  style={[
+                    styles.debugButton, 
+                    { backgroundColor: debugTesting ? colors.border : '#FF6B35' }
+                  ]}
+                  onPress={testTextModelDirectly}
+                  activeOpacity={0.8}
+                  disabled={debugTesting}
+                >
+                  {debugTesting ? (
+                    <ActivityIndicator size="small" color="#1C1C1C" />
+                  ) : (
+                    <Text style={styles.debugButtonText}>Test Model</Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* Display Raw Score */}
+                {debugModelScore !== null && (
+                  <View style={[styles.debugResult, { backgroundColor: colors.background }]}>
+                    <Text style={[styles.debugResultLabel, { color: colors.icon }]}>
+                      Raw Model Output:
+                    </Text>
+                    <Text style={[styles.debugResultValue, { color: colors.text }]}>
+                      {debugModelScore.toFixed(6)}
+                    </Text>
+                    <Text style={[styles.debugResultPercent, { 
+                      color: debugModelScore > 0.5 ? colors.danger : colors.success 
+                    }]}>
+                      {(debugModelScore * 100).toFixed(2)}% Risk
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </>
+          )}
         </>
       )}
 
@@ -345,6 +609,101 @@ export default function HomeScreen() {
                 Safety Tips
               </Text>
               {analysis.safetyTips.map((tip, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={{ color: colors.success }}>•</Text>
+                  <Text style={[styles.listItemText, { color: colors.text }]}>
+                    {tip}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: colors.border }]}
+              onPress={resetAnalysis}
+            >
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+                Analyze Another
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* On-Device Analysis Results */}
+      {onDeviceAnalysis && !isAnalyzing && (
+        <View style={styles.resultsContainer}>
+          {/* On-Device Badge */}
+          <View style={[styles.onDeviceBadge, { backgroundColor: colors.success + '20' }]}>
+            <Text style={[styles.onDeviceBadgeText, { color: colors.success }]}>
+              🔒 Analyzed On-Device {isTextOnlyMode ? '(Text AI)' : '(Visual + Text AI)'}
+            </Text>
+          </View>
+
+          {/* Status Badge */}
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: onDeviceAnalysis.isScam
+                  ? colors.danger + '20'
+                  : colors.success + '20',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                { color: onDeviceAnalysis.isScam ? colors.danger : colors.success },
+              ]}
+            >
+              {onDeviceAnalysis.isScam ? '⚠️ SCAM DETECTED' : '✓ APPEARS SAFE'}
+            </Text>
+            <Text style={[styles.confidenceText, { color: colors.icon }]}>
+              Risk Score: {(onDeviceAnalysis.fusedScore * 100).toFixed(1)}%
+            </Text>
+            <Text style={[styles.latencyText, { color: colors.icon }]}>
+              Analyzed in {onDeviceAnalysis.totalLatencyMs}ms
+            </Text>
+          </View>
+
+          {/* Explanation */}
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Analysis
+            </Text>
+            <Text style={[styles.explanationText, { color: colors.text }]}>
+              {onDeviceAnalysis.explanation}
+            </Text>
+          </View>
+
+          {/* Red Flags */}
+          {onDeviceAnalysis.redFlags && onDeviceAnalysis.redFlags.length > 0 && (
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Warning Signs
+              </Text>
+              {onDeviceAnalysis.redFlags.map((flag, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={{ color: colors.danger }}>•</Text>
+                  <Text style={[styles.listItemText, { color: colors.text }]}>
+                    {flag}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Safety Tips */}
+          {onDeviceAnalysis.safetyTips && onDeviceAnalysis.safetyTips.length > 0 && (
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Safety Tips
+              </Text>
+              {onDeviceAnalysis.safetyTips.map((tip, index) => (
                 <View key={index} style={styles.listItem}>
                   <Text style={{ color: colors.success }}>•</Text>
                   <Text style={[styles.listItemText, { color: colors.text }]}>
@@ -460,6 +819,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  latencyText: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  onDeviceBadge: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  onDeviceBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   section: {
     padding: 16,
     borderRadius: 12,
@@ -541,6 +913,64 @@ const styles = StyleSheet.create({
   searchButtonText: {
     color: '#1C1C1C',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  debugSection: {
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  debugTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  debugSubtitle: {
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  debugInput: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    marginBottom: 16,
+    minHeight: 100,
+  },
+  debugButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  debugButtonText: {
+    color: '#1C1C1C',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  debugResult: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  debugResultLabel: {
+    fontSize: 13,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  debugResultValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    marginBottom: 4,
+  },
+  debugResultPercent: {
+    fontSize: 18,
     fontWeight: '600',
   },
 });

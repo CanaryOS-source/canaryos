@@ -6,6 +6,7 @@ import {
   analyzeText,
   getStatus,
   isAvailable,
+  isRunningTextOnlyMode,
   OnDeviceAnalysisResult,
 } from '../services/ondevice';
 
@@ -32,6 +33,7 @@ export function useScanner() {
   const [analysisResult, setAnalysisResult] = useState<OnDeviceAnalysisResult | null>(null);
   const [isOnDevice, setIsOnDevice] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
+  const [isTextOnlyMode, setIsTextOnlyMode] = useState<boolean>(false);
 
   // Initialize on-device analysis on mount
   useEffect(() => {
@@ -49,11 +51,13 @@ export function useScanner() {
       try {
         await initialize();
         const status = getStatus();
+        setIsTextOnlyMode(isRunningTextOnlyMode());
         console.log('[useScanner] On-device analysis initialized:', status);
+        console.log(`[useScanner] Mode: ${isRunningTextOnlyMode() ? 'TEXT-ONLY' : 'FULL'}`);
         setState(ScanState.IDLE);
       } catch (e) {
         console.error('[useScanner] On-device initialization failed:', e);
-        // Set error state - models are required
+        // Set error state - text model is required
         setState(ScanState.ERROR);
       } finally {
         setIsInitializing(false);
@@ -65,7 +69,10 @@ export function useScanner() {
 
   /**
    * Scan an image for scam content using on-device analysis
-   * REQUIRES: Models must be loaded successfully during initialization
+   * REQUIRES: Text model must be loaded successfully during initialization
+   * 
+   * In text-only mode (no visual model), OCR extracts text and
+   * the MobileBERT model analyzes it for scam patterns.
    */
   const scanImage = useCallback(async (uri: string) => {
     setState(ScanState.SCANNING);
@@ -73,8 +80,9 @@ export function useScanner() {
     
     try {
       console.log(`[useScanner] Scanning image: ${uri}`);
+      console.log(`[useScanner] Analysis mode: ${isRunningTextOnlyMode() ? 'TEXT-ONLY' : 'FULL'}`);
       
-      // Use on-device analysis (models required)
+      // Use on-device analysis (text model required)
       const result = await analyzeImage(uri);
       
       setAnalysisResult(result);
@@ -102,6 +110,7 @@ export function useScanner() {
 
   /**
    * Scan text content directly (no image)
+   * Uses MobileBERT model for text classification
    */
   const scanText = useCallback(async (text: string) => {
     setState(ScanState.SCANNING);
@@ -156,6 +165,7 @@ export function useScanner() {
     analysisResult,
     isOnDevice,
     isInitializing,
+    isTextOnlyMode,
     
     // Actions
     scanImage,

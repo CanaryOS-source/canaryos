@@ -3,6 +3,12 @@
  * Handles loading, caching, and versioning of TFLite models
  * 
  * Security: Implements SHA-256 hash verification for model integrity
+ * 
+ * IMPORTANT: This service supports partial model loading.
+ * - Text model (MobileBERT) is REQUIRED for text analysis
+ * - Visual model (MobileNetV3) is OPTIONAL - system works without it
+ * 
+ * @see assets/models/README.md - Model specifications and setup
  */
 
 import { Platform } from 'react-native';
@@ -18,9 +24,10 @@ const FIREBASE_MODEL_BASE_URL = 'https://firebasestorage.googleapis.com/v0/b/can
 // Local cache directory
 const MODEL_CACHE_DIR = `${FileSystem.documentDirectory}models/`;
 
-// Model file hashes for integrity verification (to be updated with actual hashes)
+// Model file hashes for integrity verification
+// Update these when deploying new model versions
 const MODEL_HASHES: Record<string, string> = {
-  'mobilenet_v3_scam_detect.tflite': 'placeholder_hash_visual',
+  'mobilenet_v3_scam_detect.tflite': 'placeholder_hash_visual', // TODO: Update when visual model is created
   'mobilebert_scam_intent.tflite': 'f71f1c5edb98c9ec1636e1b1cc4fdf89a1f72cde04a69effc3624f1c0fadf1ab',
 };
 
@@ -106,15 +113,22 @@ async function downloadModel(modelName: string, remoteUrl: string): Promise<stri
 
 /**
  * Load the visual classifier model (MobileNetV3)
+ * 
+ * NOTE: This model is OPTIONAL. The system can operate without it
+ * using text-only analysis. This function will NOT throw if the model
+ * is unavailable - it will return null and log a warning.
+ * 
+ * @returns The loaded model or null if unavailable
  */
-export async function loadVisualModel(): Promise<TensorflowModel> {
+export async function loadVisualModel(): Promise<TensorflowModel | null> {
   if (visualModel) {
     console.log('[ModelLoader] Visual model already loaded');
     return visualModel;
   }
   
   if (loadState.visual.isLoading) {
-    throw new Error('Visual model is already being loaded');
+    console.log('[ModelLoader] Visual model is already being loaded');
+    return null;
   }
   
   loadState.visual.isLoading = true;
@@ -123,10 +137,6 @@ export async function loadVisualModel(): Promise<TensorflowModel> {
   const startTime = Date.now();
   
   try {
-    // Try to load from bundled assets first
-    // If not found, check cache or throw error
-    
-    // Check if we have a bundled model
     let modelUri: string;
     
     try {
@@ -140,7 +150,7 @@ export async function loadVisualModel(): Promise<TensorflowModel> {
       modelUri = asset.localUri;
       console.log(`[ModelLoader] Using bundled visual model: ${modelUri}`);
     } catch (bundleError) {
-      // No bundled model, check cache or download
+      // No bundled model, check cache
       console.log('[ModelLoader] No bundled visual model, checking cache...');
       
       const modelName = 'mobilenet_v3_scam_detect.tflite';
@@ -148,8 +158,11 @@ export async function loadVisualModel(): Promise<TensorflowModel> {
         modelUri = getCachedModelPath(modelName);
         console.log(`[ModelLoader] Using cached visual model: ${modelUri}`);
       } else {
-        // Model not available - this is an error condition
-        throw new Error('Visual model not available - please add mobilenet_v3_scam_detect.tflite to assets/models/');
+        // Visual model not available - this is OK, system works without it
+        console.warn('[ModelLoader] Visual model not available - running in text-only mode');
+        console.warn('[ModelLoader] To enable visual analysis, add mobilenet_v3_scam_detect.tflite to assets/models/');
+        loadState.visual.error = new Error('Visual model not available (text-only mode active)');
+        return null;
       }
     }
     
@@ -170,8 +183,8 @@ export async function loadVisualModel(): Promise<TensorflowModel> {
     return visualModel;
   } catch (error) {
     loadState.visual.error = error as Error;
-    console.error('[ModelLoader] Failed to load visual model:', error);
-    throw error;
+    console.warn('[ModelLoader] Failed to load visual model (text-only mode):', error);
+    return null;
   } finally {
     loadState.visual.isLoading = false;
   }
@@ -247,11 +260,18 @@ export async function loadTextModel(): Promise<TensorflowModel> {
 
 /**
  * Load all models in parallel
+ * 
+ * IMPORTANT: This function loads both models but only TEXT model is required.
+ * Visual model is optional - system works in text-only mode without it.
+ * 
+ * @returns Object with loaded models and any errors
  */
 export async function loadAllModels(): Promise<{
   visual: TensorflowModel | null;
   text: TensorflowModel | null;
   errors: string[];
+  isTextReady: boolean;
+  isVisualReady: boolean;
 }> {
   const errors: string[] = [];
   let visual: TensorflowModel | null = null;
@@ -262,19 +282,39 @@ export async function loadAllModels(): Promise<{
     loadTextModel(),
   ]);
   
+  // Visual model - optional (null is acceptable)
   if (results[0].status === 'fulfilled') {
     visual = results[0].value;
+    if (!visual) {
+      // Not an error, just informational
+      console.log('[ModelLoader] Visual model unavailable - text-only mode');
+    }
   } else {
-    errors.push(`Visual model: ${results[0].reason}`);
+    console.warn('[ModelLoader] Visual model load rejected:', results[0].reason);
   }
   
+  // Text model - REQUIRED
   if (results[1].status === 'fulfilled') {
     text = results[1].value;
   } else {
-    errors.push(`Text model: ${results[1].reason}`);
+    errors.push(`Text model (REQUIRED): ${results[1].reason}`);
   }
   
-  return { visual, text, errors };
+  return { 
+    visual, 
+    text, 
+    errors,
+    isTextReady: text !== null,
+    isVisualReady: visual !== null,
+  };
+}
+
+/**
+ * Load only the text model (for text-only analysis mode)
+ * Use this when you only need text analysis functionality
+ */
+export async function loadTextModelOnly(): Promise<TensorflowModel> {
+  return loadTextModel();
 }
 
 /**
@@ -300,16 +340,31 @@ export function getLoadState(): { visual: ModelLoadState; text: ModelLoadState }
 
 /**
  * Check if models are ready for inference
+ * Returns true if at least the TEXT model is loaded (minimum requirement)
  */
 export function isReady(): boolean {
-  return loadState.visual.isLoaded || loadState.text.isLoaded;
+  return loadState.text.isLoaded;
 }
 
 /**
- * Check if all models are loaded
+ * Check if all models are loaded (both visual and text)
  */
 export function isFullyLoaded(): boolean {
   return loadState.visual.isLoaded && loadState.text.isLoaded;
+}
+
+/**
+ * Check if text model is loaded (required for any analysis)
+ */
+export function isTextModelReady(): boolean {
+  return loadState.text.isLoaded;
+}
+
+/**
+ * Check if visual model is loaded (optional, enhances analysis)
+ */
+export function isVisualModelReady(): boolean {
+  return loadState.visual.isLoaded;
 }
 
 /**

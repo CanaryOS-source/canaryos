@@ -167,4 +167,6 @@ export interface OnDeviceServiceStatus {
   textModelStatus: ModelLoadState;
   ocrAvailable: boolean;
   lastError: string | null;
+  /** True if running without visual model (text analysis only) */
+  isTextOnlyMode?: boolean;
 }

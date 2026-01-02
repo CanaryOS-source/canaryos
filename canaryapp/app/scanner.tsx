@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function ScannerScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const { state, confidence, analysisResult, isOnDevice, scanImage, reset } = useScanner();
+  const { state, confidence, analysisResult, isOnDevice, isTextOnlyMode, scanImage, reset } = useScanner();
 
   const pickImage = async () => {
     // Request permissions first
@@ -45,7 +45,9 @@ export default function ScannerScreen() {
         {isOnDevice && (
           <View style={styles.onDeviceBadge}>
             <Ionicons name="shield-checkmark" size={14} color="#34C759" />
-            <Text style={styles.onDeviceText}>Analyzed on-device</Text>
+            <Text style={styles.onDeviceText}>
+              Analyzed on-device{isTextOnlyMode ? ' (Text AI)' : ' (Visual + Text AI)'}
+            </Text>
           </View>
         )}
         
@@ -94,7 +96,9 @@ export default function ScannerScreen() {
           <View style={styles.resultContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.statusText}>Analyzing with on-device AI...</Text>
-            <Text style={styles.subStatusText}>OCR + Visual + Text Analysis</Text>
+            <Text style={styles.subStatusText}>
+              {isTextOnlyMode ? 'OCR + Text Analysis' : 'OCR + Visual + Text Analysis'}
+            </Text>
           </View>
         );
       case ScanState.SAFE:

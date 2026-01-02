@@ -2,13 +2,19 @@
  * On-Device Scam Analysis Module
  * 
  * This module provides complete on-device scam detection capabilities:
- * - Visual analysis using MobileNetV3 (TFLite)
- * - Text analysis using MobileBERT (TFLite) + heuristics
+ * - Visual analysis using MobileNetV3 (TFLite) [OPTIONAL]
+ * - Text analysis using MobileBERT (TFLite) + heuristics [REQUIRED]
  * - OCR via Google ML Kit
  * - Score fusion for final risk assessment
  * 
- * IMPORTANT: TFLite models must be placed in assets/models/ before use.
- * See assets/models/README.md for setup instructions.
+ * OPERATION MODES:
+ * - Full Mode: Both visual and text models loaded (best accuracy)
+ * - Text-Only Mode: Only text model loaded (still effective)
+ * 
+ * IMPORTANT: 
+ * - Text model (mobilebert_scam_intent.tflite) MUST be in assets/models/
+ * - Visual model (mobilenet_v3_scam_detect.tflite) is OPTIONAL
+ * - See docs/VISUAL_CLASSIFIER_INTEGRATION.md for visual model setup
  * 
  * Privacy: All processing happens on-device. No data leaves the device.
  */
@@ -21,6 +27,7 @@ export {
   quickAnalyze,
   getStatus,
   isAvailable,
+  isRunningTextOnlyMode,
   cleanup,
 } from './OnDeviceScamAnalyzer';
 

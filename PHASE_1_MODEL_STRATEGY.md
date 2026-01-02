@@ -45,7 +45,7 @@ $$ Score_{Final} = max(Score_{Visual}, Score_{Text}) $$
 
 ---
 
-## 3. Implementation Roadmap for Next Agent
+## 3. Implementation Roadmap for Agent
 
 ### Step 1: Specific Dependencies
 The next agent needs to install these precise packages:
