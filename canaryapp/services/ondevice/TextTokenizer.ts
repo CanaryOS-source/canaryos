@@ -13,6 +13,15 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { DEFAULT_MODEL_CONFIG } from './types';
 
+// Pre-require the vocab asset at module load time
+// This must be a static require for Metro bundler to include the file
+let vocabAssetModule: number | null = null;
+try {
+  vocabAssetModule = require('../../assets/models/vocab.txt');
+} catch (e) {
+  console.warn('[Tokenizer] Static require for vocab.txt failed, will try alternative loading');
+}
+
 // Special tokens (standard BERT vocabulary positions)
 const PAD_TOKEN = '[PAD]';
 const UNK_TOKEN = '[UNK]';
@@ -55,16 +64,34 @@ export async function loadVocabulary(): Promise<void> {
     try {
       console.log('[Tokenizer] Loading vocabulary from bundled assets...');
       
+      // Use the pre-required module if available, otherwise try dynamic require
+      const assetModule = vocabAssetModule ?? require('../../assets/models/vocab.txt');
+      
+      console.log('[Tokenizer] Asset module loaded:', typeof assetModule);
+      
       // Load vocab.txt from bundled assets
-      const asset = Asset.fromModule(require('../../assets/models/vocab.txt'));
+      const asset = Asset.fromModule(assetModule);
+      
+      console.log('[Tokenizer] Asset created, downloading...');
+      console.log('[Tokenizer] Asset info:', { 
+        name: asset.name, 
+        type: asset.type,
+        uri: asset.uri,
+        localUri: asset.localUri 
+      });
+      
       await asset.downloadAsync();
       
       if (!asset.localUri) {
-        throw new Error('Failed to resolve vocab.txt asset URI');
+        throw new Error('Failed to resolve vocab.txt asset URI after download');
       }
+      
+      console.log('[Tokenizer] Asset downloaded to:', asset.localUri);
       
       // Read the vocabulary file
       const vocabContent = await FileSystem.readAsStringAsync(asset.localUri);
+      console.log('[Tokenizer] Read vocab file, length:', vocabContent.length);
+      
       const lines = vocabContent.split('\n');
       
       // Build vocabulary maps
@@ -84,11 +111,20 @@ export async function loadVocabulary(): Promise<void> {
       // Verify special tokens are present
       if (!vocabulary.has(CLS_TOKEN) || !vocabulary.has(SEP_TOKEN)) {
         console.warn('[Tokenizer] Warning: Special tokens may be missing from vocabulary');
+      } else {
+        console.log('[Tokenizer] ✓ Special tokens verified: [CLS], [SEP], [PAD], [UNK]');
       }
+      
+      // Debug: Check a few key scam-related tokens
+      const testTokens = ['congratulations', 'urgent', 'irs', 'won', 'prize'];
+      const foundTokens = testTokens.filter(t => vocabulary!.has(t));
+      console.log(`[Tokenizer] Key tokens check: ${foundTokens.length}/${testTokens.length} found`);
       
     } catch (error) {
       console.error('[Tokenizer] Failed to load vocabulary:', error);
+      console.error('[Tokenizer] Error details:', JSON.stringify(error, null, 2));
       // Initialize with fallback minimal vocabulary for basic operation
+      console.warn('[Tokenizer] ⚠️ Using FALLBACK vocabulary - model accuracy will be severely degraded!');
       initializeFallbackVocabulary();
     } finally {
       isVocabLoading = false;

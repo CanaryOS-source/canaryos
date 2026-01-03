@@ -185,7 +185,12 @@ export async function classifyWithModel(text: string): Promise<number> {
     }
     
     // Tokenize and encode
-    const { inputIds } = encodeForModel(text);
+    const { inputIds, tokenCount } = encodeForModel(text);
+    
+    // Debug: Log first 20 token IDs to verify tokenization
+    const first20Ids = Array.from(inputIds.slice(0, 20));
+    console.log('[TextClassifier] Token IDs (first 20):', first20Ids);
+    console.log('[TextClassifier] Token count:', tokenCount);
     
     // Run inference
     console.log('[TextClassifier] Running model inference...');
@@ -194,6 +199,8 @@ export async function classifyWithModel(text: string): Promise<number> {
     // Get risk score from output
     const resultArray = output[0] as Float32Array;
     const riskScore = resultArray[0] || 0;
+    
+    console.log('[TextClassifier] Raw model output:', riskScore);
     
     return Math.max(0, Math.min(1, riskScore)); // Clamp to 0-1
   } catch (error) {

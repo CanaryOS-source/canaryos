@@ -10,6 +10,7 @@ module.exports = {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
+      bundleIdentifier: 'com.canaryapp',
     },
     android: {
       package: 'com.canaryapp',
