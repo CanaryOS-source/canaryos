@@ -6,11 +6,11 @@
  */
 
 import { TensorflowModel } from 'react-native-fast-tflite';
-import { 
-  TextAnalysisResult, 
-  ScamPattern, 
+import {
+  TextAnalysisResult,
+  ScamPattern,
   ScamPatternType,
-  DEFAULT_MODEL_CONFIG 
+  DEFAULT_MODEL_CONFIG
 } from './types';
 import { getTextModel, loadTextModel } from './ModelLoaderService';
 import { encodeForModel, detectHomoglyphs, normalizeForTokenization } from './TextTokenizer';
@@ -174,7 +174,21 @@ export function calculateHeuristicScore(patterns: ScamPattern[]): number {
 }
 
 /**
+ * Softmax helper for converting logits to probabilities
+ */
+function softmax(logits: number[]): number[] {
+  const maxLogit = Math.max(...logits);
+  const exps = logits.map(l => Math.exp(l - maxLogit)); // subtract max for numerical stability
+  const sumExps = exps.reduce((a, b) => a + b, 0);
+  return exps.map(e => e / sumExps);
+}
+
+/**
  * Run text classification with ML model
+ *
+ * V3 Model: MobileBERT TFLite
+ * - Inputs: input_ids [1, 128] int32 + attention_mask [1, 128] int32
+ * - Output: [1, 2] logits → softmax → [safe_prob, scam_prob]
  */
 export async function classifyWithModel(text: string): Promise<number> {
   try {
@@ -183,26 +197,54 @@ export async function classifyWithModel(text: string): Promise<number> {
       console.log('[TextClassifier] Model not loaded, loading now...');
       model = await loadTextModel();
     }
-    
-    // Tokenize and encode
-    const { inputIds, tokenCount } = encodeForModel(text);
-    
+
+    // Tokenize and encode (returns both inputIds and attentionMask)
+    const { inputIds, attentionMask, tokenCount } = encodeForModel(text);
+
     // Debug: Log first 20 token IDs to verify tokenization
     const first20Ids = Array.from(inputIds.slice(0, 20));
     console.log('[TextClassifier] Token IDs (first 20):', first20Ids);
     console.log('[TextClassifier] Token count:', tokenCount);
-    
-    // Run inference
-    console.log('[TextClassifier] Running model inference...');
-    const output = await model.run([inputIds]);
-    
-    // Get risk score from output
-    const resultArray = output[0] as Float32Array;
-    const riskScore = resultArray[0] || 0;
-    
-    console.log('[TextClassifier] Raw model output:', riskScore);
-    
-    return Math.max(0, Math.min(1, riskScore)); // Clamp to 0-1
+
+    // Log model input/output tensor info for debugging
+    console.log('[TextClassifier] Model inputs:', JSON.stringify(model.inputs));
+    console.log('[TextClassifier] Model outputs:', JSON.stringify(model.outputs));
+
+    // Build typed array matching the model's expected input type (int32)
+    const inputIdsTyped = new Int32Array(inputIds);
+
+    // Build input array matching model.inputs length
+    // TFLite model may have 1 input (input_ids only) or 2 (input_ids + attention_mask)
+    const inputArrays: Int32Array[] = [inputIdsTyped];
+    if (model.inputs.length >= 2) {
+      const attentionMaskTyped = new Int32Array(attentionMask);
+      inputArrays.push(attentionMaskTyped);
+    }
+
+    // Run TFLite inference — inputs are positional (matching model.inputs order)
+    console.log(`[TextClassifier] Running TFLite model inference (${inputArrays.length} input(s))...`);
+    const outputs = await model.run(inputArrays);
+
+    // Read output from the first output tensor
+    const resultArray = outputs[0] as Float32Array;
+    console.log(`[TextClassifier] Raw output (${resultArray.length} values): [${Array.from(resultArray).map(v => Number(v).toFixed(4)).join(', ')}]`);
+
+    if (resultArray.length >= 2) {
+      // Two-class output: apply softmax to get scam probability
+      const logits = [Number(resultArray[0]), Number(resultArray[1])];
+      const probs = softmax(logits);
+      const scamProb = probs[1]; // Index 1 = SCAM class
+
+      console.log(`[TextClassifier] TFLite logits: [${logits[0].toFixed(3)}, ${logits[1].toFixed(3)}]`);
+      console.log(`[TextClassifier] TFLite probs: safe=${probs[0].toFixed(4)}, scam=${probs[1].toFixed(4)}`);
+
+      return Math.max(0, Math.min(1, scamProb)); // Clamp to 0-1
+    } else {
+      // Single-output: direct sigmoid/risk score
+      const riskScore = Number(resultArray[0]) || 0;
+      console.log(`[TextClassifier] Single-output score: ${riskScore.toFixed(4)}`);
+      return Math.max(0, Math.min(1, riskScore));
+    }
   } catch (error) {
     console.error('[TextClassifier] Model inference failed:', error);
     return -1; // Indicate failure

@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Colors, CanaryColors } from '@/constants/theme';
-import { FloatingScanner } from '@/components/floating-scanner';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut, deleteAccount } from '@/services/firebase';
 
@@ -207,11 +206,6 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* Floating Scanner Section */}
-      <View style={styles.scannerSection}>
-        <FloatingScanner />
-      </View>
-
       {/* Account Section */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
         <Text style={[styles.sectionHeader, { color: colors.text }]}>Account</Text>
@@ -312,9 +306,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     marginLeft: 8,
-  },
-  scannerSection: {
-    marginBottom: 30,
   },
   sectionHeader: {
     fontSize: 20,

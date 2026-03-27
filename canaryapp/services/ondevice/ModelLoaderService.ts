@@ -28,7 +28,7 @@ const MODEL_CACHE_DIR = `${FileSystem.documentDirectory}models/`;
 // Update these when deploying new model versions
 const MODEL_HASHES: Record<string, string> = {
   'mobilenet_v3_scam_detect.tflite': 'placeholder_hash_visual', // TODO: Update when visual model is created
-  'mobilebert_scam_intent.tflite': 'f71f1c5edb98c9ec1636e1b1cc4fdf89a1f72cde04a69effc3624f1c0fadf1ab',
+  'mobilebert_scam_intent.tflite': 'placeholder_hash_text', // TODO: Update with actual model hash
 };
 
 // Singleton instances
@@ -191,31 +191,32 @@ export async function loadVisualModel(): Promise<TensorflowModel | null> {
 }
 
 /**
- * Load the text classifier model (MobileBERT)
+ * Load the text classifier model (MobileBERT TFLite)
+ * V3: 2 inputs (input_ids, attention_mask) → 2 output logits (safe, scam)
  */
 export async function loadTextModel(): Promise<TensorflowModel> {
   if (textModel) {
     console.log('[ModelLoader] Text model already loaded');
     return textModel;
   }
-  
+
   if (loadState.text.isLoading) {
     throw new Error('Text model is already being loaded');
   }
-  
+
   loadState.text.isLoading = true;
   loadState.text.error = null;
-  
+
   const startTime = Date.now();
-  
+
   try {
     let modelUri: string;
-    
+
     try {
       // Try to load from bundled assets
       const asset = Asset.fromModule(require('../../assets/models/mobilebert_scam_intent.tflite'));
       await asset.downloadAsync();
-      
+
       if (!asset.localUri) {
         throw new Error('Failed to resolve bundled model asset');
       }
@@ -223,31 +224,30 @@ export async function loadTextModel(): Promise<TensorflowModel> {
       console.log(`[ModelLoader] Using bundled text model: ${modelUri}`);
     } catch (bundleError) {
       console.log('[ModelLoader] No bundled text model, checking cache...');
-      
+
       const modelName = 'mobilebert_scam_intent.tflite';
       if (await isModelCached(modelName)) {
         modelUri = getCachedModelPath(modelName);
         console.log(`[ModelLoader] Using cached text model: ${modelUri}`);
       } else {
-        console.warn('[ModelLoader] Text model not available - running in test mode');
+        console.warn('[ModelLoader] Text model not available');
         throw new Error('Text model not available - please add mobilebert_scam_intent.tflite to assets/models/');
       }
     }
-    
-    // Load the model
-    const config = DEFAULT_MODEL_CONFIG.textModel;
+
+    // Load the model using react-native-fast-tflite
     textModel = await loadTensorflowModel(
       { url: modelUri },
-      config.delegate
+      'default'
     );
-    
+
     loadState.text.isLoaded = true;
     loadState.text.loadTimeMs = Date.now() - startTime;
-    
+
     console.log(`[ModelLoader] Text model loaded in ${loadState.text.loadTimeMs}ms`);
     console.log(`[ModelLoader] Text model inputs: ${JSON.stringify(textModel.inputs)}`);
     console.log(`[ModelLoader] Text model outputs: ${JSON.stringify(textModel.outputs)}`);
-    
+
     return textModel;
   } catch (error) {
     loadState.text.error = error as Error;

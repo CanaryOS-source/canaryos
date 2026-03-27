@@ -22,19 +22,23 @@ This directory contains TensorFlow Lite models for on-device scam detection.
 - Fake login forms
 - Urgency-inducing popup screenshots
 
-### 2. Text Classifier (MobileBERT-Tiny)
-**File:** `mobilebert_scam_intent.tflite`
+### 2. Text Classifier — V3 MobileBERT (PyTorch → ONNX → TFLite, Int8 Quantized)
+**File:** `mobilebert_scam_intent.tflite` (~26 MB)
+**ONNX Reference:** `canary_v3_int8.onnx` (~26 MB)
 
-- **Input:** 128-token sequence (int32 input_ids)
-- **Output:** Single risk score (float32, 0-1)
-  - 0.0-0.3: Safe content
-  - 0.3-0.7: Suspicious content
-  - 0.7-1.0: Likely scam
+- **Inputs:**
+  - `input_ids`: [1, 128] int32 — WordPiece token IDs
+  - `attention_mask`: [1, 128] int32 — 1 for real tokens, 0 for padding
+- **Output:** [1, 2] float32 logits → apply softmax
+  - Index 0: safe probability
+  - Index 1: scam probability
+- **Pipeline:** PyTorch MobileBERT → ONNX export → Int8 dynamic quantization → TFLite conversion
+- **Accuracy:** ~98% test accuracy, high recall on modern scam patterns
 
 **Training Data:**
-- Phishing email/SMS text corpus
-- Legitimate notification text
-- Social engineering message patterns
+- SMS Spam Collection (UCI, 5.6k messages)
+- 52 modern scam patterns x5 augmentation (crypto, pig butchering, banking fraud, job scams, etc.)
+- 14 legitimate patterns x5 augmentation
 
 ## Setup Instructions
 
@@ -120,21 +124,21 @@ Check console logs for successful model loading:
 | Dtype | `float32` |
 | Values | Softmax probabilities |
 
-### Text Model Input Tensor
-| Property | Value |
-|----------|-------|
-| Name | `input_ids` |
-| Shape | `[1, 128]` |
-| Dtype | `int32` |
-| Values | WordPiece token IDs |
+### Text Model Input Tensors (V3)
+| Property | Input 1 | Input 2 |
+|----------|---------|---------|
+| Name | `input_ids` | `attention_mask` |
+| Shape | `[1, 128]` | `[1, 128]` |
+| Dtype | `int32` | `int32` |
+| Values | WordPiece token IDs | 1=real token, 0=padding |
 
-### Text Model Output Tensor
+### Text Model Output Tensor (V3)
 | Property | Value |
 |----------|-------|
 | Name | `output` |
-| Shape | `[1, 1]` |
+| Shape | `[1, 2]` |
 | Dtype | `float32` |
-| Range | `0.0 - 1.0` (risk score) |
+| Values | Raw logits → softmax → [safe_prob, scam_prob] |
 
 ## Model Training Resources
 

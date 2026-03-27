@@ -28,11 +28,10 @@ export const DEFAULT_MODEL_CONFIG: ModelMetadata = {
     delegate: 'default',
   },
   textModel: {
-    name: 'mobilebert_scam_intent',
-    version: '1.0.0',
-    inputShape: [1, 128], // Batch, Sequence Length (token IDs)
-    outputShape: [1, 1], // Risk score 0-1
-    delegate: 'default',
+    name: 'canary_v3_int8',
+    version: '3.0.0', // V3: MobileBERT ONNX Int8 quantized, 2-class output
+    inputShape: [1, 128], // Batch, Sequence Length (token IDs) — also requires attention_mask [1, 128]
+    outputShape: [1, 2], // [safe_logit, scam_logit] — apply softmax, index 1 = scam probability
   },
   vocabSize: 30522, // Standard BERT vocab size
   maxSequenceLength: 128,

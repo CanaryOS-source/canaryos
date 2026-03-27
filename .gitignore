@@ -1,6 +1,4 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
@@ -9,7 +7,7 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native build output
 .kotlin/
 *.orig.*
 *.jks
@@ -21,7 +19,7 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
+# Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -30,18 +28,45 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Environment & secrets
+.env
 .env*.local
+*.env
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 
-app-example
+# Generated native folders
+canaryapp/ios
+canaryapp/android
 
-# generated native folders
-/ios
-/android
-
-# Vercel AI SDK
+# Vercel
 .vercel
-*.env
+
+# Bug reports
+bugreport-*.zip
+
+# Module builds
+canaryapp/modules/*/android/build
+canaryapp/modules/*/android/.gradle
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Research artifacts (large files)
+research/data/
+research/models/*.tflite
+research/models/*.onnx
+research/models/saved_model_scam_detector/
+research/models/output_models/
+
+# Model formats (only production models in canaryapp/assets/models/ are tracked)
+*.onnx
+*.bak
+
+# Misc
+canaryapp/out.txt
+app-example

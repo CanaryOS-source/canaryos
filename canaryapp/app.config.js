@@ -48,7 +48,6 @@ module.exports = {
           },
         },
       ],
-      './plugins/withFloatingScanner.js',
       '@react-native-firebase/app',
       '@react-native-firebase/auth',
       [
