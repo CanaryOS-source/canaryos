@@ -10,34 +10,48 @@
 
 ### Recommended API
 
-**OpenAI GPT-4o-mini** via the standard `openai` Python SDK.
+**Google Gemini** via the `google-genai` Python SDK (the current unified Google Gen AI SDK — not the deprecated `google-generativeai` package).
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| `openai` | `>=1.30.0` | Structured synthetic data generation |
+| `google-genai` | `>=1.0.0` | Structured synthetic data generation via Gemini API |
 
-**Rationale:** GPT-4o-mini supports native JSON Schema structured outputs (enforced server-side), costs ~$0.15/1M input tokens — roughly 10x cheaper than Claude Haiku and 60x cheaper than GPT-4o for the same structured generation task. For generating 5,000–20,000 labeled scam/safe examples across 8–10 scam vectors, total cost stays under $5–10 at typical prompt lengths. Claude Haiku 4.5 is a viable alternative ($1/5M tokens) but the `openai` SDK has more mature structured output tooling for batch generation workflows.
+**Rationale:** Gemini 2.5 Flash supports native JSON Schema structured outputs enforced server-side via `response_mime_type='application/json'` + `response_json_schema`. The user has an existing Gemini API key. For generating 16K–24K labeled scam/safe examples across 8 scam vectors, Gemini 2.5 Flash provides strong generation quality at low cost.
 
-**Why NOT use local Mistral-7B:** Research shows Mistral-7B produces high-quality synthetic scam text, but requires a GPU environment not currently in the research stack. The hosted API is cheaper and faster for this dataset size.
+**Why NOT use local Mistral-7B:** Requires a GPU environment not currently in the research stack. The hosted API is cheaper and faster for this dataset size.
 
 **Generation pattern:**
 
 ```python
-from openai import OpenAI
+from google import genai
+from google.genai import types
+from pydantic import BaseModel
 
-client = OpenAI()
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    response_format={"type": "json_schema", "json_schema": SCAM_SCHEMA},
-    messages=[{"role": "user", "content": GENERATION_PROMPT}]
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+class ScamSample(BaseModel):
+    text: str
+    label: str          # "scam" or "safe"
+    vector: str         # e.g., "crypto", "romance", "tech_support"
+    channel: str        # "sms", "email", "app_notification"
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=GENERATION_PROMPT,
+    config=types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_json_schema=ScamSample.model_json_schema(),
+    ),
 )
+import json
+sample = ScamSample(**json.loads(response.text))
 ```
 
 **Scam vectors to cover (informed by PROJECT.md):** crypto/investment, romance, tech support, government impersonation, lottery/reward, urgency-payment, phishing, remote access. Safe-class examples must match channel and register (SMS, email header, app notification) to prevent distribution shift.
 
 **Quality control:** Two-pass filter — (1) LLM self-evaluation prompt per generated sample, (2) rule-based post-filter removing duplicates and samples under 15 tokens. Target 80/10/10 train/val/test split stratified by scam vector.
 
-**Confidence:** MEDIUM — GPT-4o-mini structured outputs are well-documented. Dataset quality depends on prompt engineering, which requires experimentation.
+**Confidence:** MEDIUM — Gemini structured outputs via `response_json_schema` are well-documented in the current SDK. Dataset quality depends on prompt engineering, which requires experimentation.
 
 ---
 
@@ -256,7 +270,7 @@ All are well within the 50MB budget. No pruning needed unless size unexpectedly 
 ```bash
 # Core research additions (add to research requirements or notebook setup cell)
 pip install \
-  "openai>=1.30.0" \
+  "google-genai>=1.0.0" \
   "transformers>=4.48.0,<5.0" \
   "datasets>=3.0.0" \
   "evaluate>=0.4.0" \
@@ -287,6 +301,7 @@ pip install \
 - TFLite post-training quantization: https://ai.google.dev/edge/litert/conversion/tensorflow/quantization/post_training_quantization
 - onnx2tf actively maintained converter: https://github.com/PINTO0309/onnx2tf
 - Synthetic data for scam detection (IEEE 2025): https://ieeexplore.ieee.org/iel8/10973324/10973328/10973460.pdf
-- OpenAI structured outputs for synthetic data: https://developers.openai.com/cookbook/examples/sdg1
+- Google Gen AI Python SDK (google-genai): https://github.com/googleapis/python-genai
+- Gemini structured output with JSON schema: https://ai.google.dev/gemini-api/docs/structured-output
 - HuggingFace transformers TFLite known issues: https://github.com/huggingface/transformers/issues/19231
 - Knowledge distillation BERT (Phil Schmid): https://www.philschmid.de/knowledge-distillation-bert-transformers

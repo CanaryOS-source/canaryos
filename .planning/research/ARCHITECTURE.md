@@ -23,7 +23,7 @@ This document answers four integration questions:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STAGE 1: DATA GENERATION                                                   │
 │  research/scripts/generate_dataset.py                                       │
-│  ├── LLM API calls (OpenAI / Anthropic / local)                             │
+│  ├── LLM API calls (Google Gemini via google-genai SDK)                     │
 │  ├── Prompt templates per scam vector                                        │
 │  └── Output: research/data/synthetic_scam_v1.jsonl  (gitignored)           │
 └────────────────────────────────┬────────────────────────────────────────────┘

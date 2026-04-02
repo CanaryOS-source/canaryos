@@ -34,7 +34,7 @@
 
 **Plans:** TBD
 
-**Research refs:** `.planning/research/FEATURES.md` (scam vector taxonomy, hard negative rationale, dataset sources), `.planning/research/PITFALLS.md` (Pitfalls 1.1–1.4: evaluation contamination, mode collapse, prompt leakage, safety filtering), `.planning/research/STACK.md` (GPT-4o-mini structured output generation pattern)
+**Research refs:** `.planning/research/FEATURES.md` (scam vector taxonomy, hard negative rationale, dataset sources), `.planning/research/PITFALLS.md` (Pitfalls 1.1–1.4: evaluation contamination, mode collapse, prompt leakage, safety filtering), `.planning/research/STACK.md` (Gemini structured output generation pattern via google-genai SDK)
 
 ---
 

@@ -29,7 +29,7 @@ Features that go beyond table stakes and make CanaryOS better than a simple spam
 |---------|-------------------|------------|------------|-------|
 | Intent / vector classification (multi-label) | Explains *why* something is a scam — enables per-vector thresholds and explanations | High | Good synthetic data + binary classifier working first | Labels: urgency, authority, financial_request, remote_access, reward_lottery, impersonation, romance_grooming, crypto |
 | Knowledge distillation from DeBERTa-v3-large teacher | Transfers accuracy from 435M param teacher to ~14M param student; expected 3–5 pt F1 gain over direct fine-tune | High | Requires: (1) clean labeled dataset, (2) teacher fine-tuned first | Do teacher fine-tune on synthetic data, then distill to TinyBERT-4 student |
-| Synthetic data quality filtering pipeline | Self-consistency check (classify generated samples with zero-shot teacher, discard mismatches) ensures label noise stays below ~5% | Medium | LLM API access (GPT-4o or Claude 3.5 Sonnet as generator) | Solves the main failure mode of LLM-generated training data |
+| Synthetic data quality filtering pipeline | Self-consistency check (classify generated samples with zero-shot teacher, discard mismatches) ensures label noise stays below ~5% | Medium | LLM API access (Gemini via google-genai SDK) | Solves the main failure mode of LLM-generated training data |
 | Out-of-distribution (OOD) robustness | Hard-negative mining from legitimate messages that use scam-adjacent language (urgency from banks, delivery confirmations) | Medium | Binary classifier must be stable first | Prevents false positive spike on legitimate urgent messages |
 | Per-vector confidence calibration | Platt scaling or temperature calibration per label head so confidence scores are meaningful | Low | Multi-label head must exist | Required before surfacing per-vector explanations to users |
 
@@ -81,7 +81,7 @@ Step 1: Synthetic Dataset Generation
       * ealvaradob/phishing-dataset (HuggingFace) — 5,971 SMS: 489 spam, 638 smishing, 4,844 ham
       * redasers/difraud (HuggingFace) — 95,854 samples, 7 fraud domains (use as supplemental)
       * ucirvine/sms_spam — 5,574 SMS (legacy baseline; use as hard-negative source)
-  - LLM generator: GPT-4o or Claude 3.5 Sonnet (proven diverse, human-like)
+  - LLM generator: Gemini 2.5 Flash via google-genai SDK (structured JSON output enforced server-side)
   - Quality gate: 100-sample human review before training begins
         |
         v
