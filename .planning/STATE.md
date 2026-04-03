@@ -18,7 +18,7 @@ progress:
 
 Phase: 01 (data-foundation) — EXECUTING
 Plan: 2 of 3
-Status: Blocked — awaiting user action (GEMINI_API_KEY + ollama pull llama3.1:8b)
+Status: Executing — generation script running (128 samples written, ~26,872 remaining)
 Last activity: 2026-04-03
 
 ## Milestone
@@ -90,17 +90,18 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 
 - Used `llama3.1:8b` as Ollama model per D-06 (Claude's discretion — better documented for structured generation than Mistral 7B)
 - romance_grooming and government_impersonation routed 50% to Ollama per Pitfall 1.4 (safety filter bypass for sensitive vectors)
-- Hard negative safe class is 25% of safe target with 4 domain types per D-09/D-11
+- Hard negative safe class is 25% of safe target with 6 domain categories per D-09/D-11 (added legitimate_tech and legitimate_government categories beyond original 4)
 - Script is resumable: loads existing synthetic_raw.jsonl and fills remaining per-vector gaps
+- **Replaced static template cycling with parametric prompt builder** — root cause of observed structural repetition in first 128 samples was cycling 5-8 fixed templates hundreds of times. `build_scam_prompt()` and `build_safe_prompt()` each sample from 7 independent parameter spaces (sub-variant × register × length × emotional angle × sender persona × cultural context × channel), producing millions of unique combinations per vector. Scam: 12 sub-variants × 12 registers × 5 emotional angles × 8 personas × 16 contexts. Safe: 35 transactional variants + 6 hard-neg categories × 8 variants each. Existing 128 samples preserved (valid data; dedup filter in Phase 3 handles any exact duplicates).
 
 ### Active Blockers
 
-- **01-02 Task 2:** `GEMINI_API_KEY` not set in environment. Get from https://aistudio.google.com/apikey then `export GEMINI_API_KEY="your-key"`
-- **01-02 Task 2:** `llama3.1:8b` not in Ollama (only `kimi-k2.5:cloud` present). Run: `ollama pull llama3.1:8b`
+None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available.
 
 ### Execution Log
 
 - 2026-04-03: Plan 01-01 completed — Wave 0 validation scripts and real-world holdout (commits db7c9f3, cb054f7)
 - 2026-04-03: Plan 01-02 Task 1 completed — generate_dataset.py script (commit 6155546)
-- 2026-04-03: Plan 01-02 Task 2 blocked — auth gate (GEMINI_API_KEY missing, llama3.1:8b not pulled)
-- Last session: 2026-04-03 — Stopped at: 01-02 Task 2 auth gate
+- 2026-04-03: Plan 01-02 Task 2 in progress — 128 samples written (all crypto_investment), generation paused
+- 2026-04-03: generate_dataset.py refactored — static SCAM_PROMPTS/SAFE_HARD_NEGATIVE_PROMPTS/SAFE_NORMAL_PROMPTS replaced with parametric build_scam_prompt() and build_safe_prompt() to eliminate structural repetition
+- Last session: 2026-04-03 — Stopped at: 01-02 Task 2 generation in progress

@@ -24,7 +24,7 @@ Build the real-world holdout set (locked evaluation oracle for all downstream ph
 
 - **D-05:** Two-model generation: Gemini 2.5 Flash (~75% of samples) + a local open-source model via Ollama (~25%) to diversify token distribution and reduce mode collapse risk
 - **D-06:** Local model choice: Claude's discretion — pick whichever of Llama 3.1 8B or Mistral 7B is easier to set up in the existing research environment (`.venv`, no GPU required — CPU inference is acceptable for the ~25% share)
-- **D-07:** Prompt structural diversity required even within Gemini generation: vary channel (SMS/email/WhatsApp/app notification), register (typos, non-native English, formal, colloquial), length, and formality
+- **D-07:** Prompt structural diversity required within each model's generation. Implemented via parametric prompt builder (`build_scam_prompt`, `build_safe_prompt`) that samples from 7 independent parameter spaces per call: scam sub-variant (12+/vector), writing register (12 styles), length target (3/channel), emotional angle (5/vector), sender persona (6-8/vector), cultural/demographic context (16 options), channel (4). This replaced static template cycling (5-8 fixed prompts) that caused structural repetition observed in initial 128-sample inspection.
 - **D-08:** JS divergence check: compute token-unigram Jensen-Shannon divergence across vectors after generation and before training. If divergence is very low between vectors, generation strategy must be revised before proceeding.
 
 ### Synthetic Generation — Safe Class / Hard Negatives

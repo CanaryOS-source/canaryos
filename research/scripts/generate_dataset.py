@@ -5,6 +5,11 @@ Generates 16K-24K+ labeled training samples across 8 scam vectors using:
   - Gemini 2.5 Flash (~75% of samples)
   - Ollama Llama 3.1 8B (~25% of samples)
 
+Prompt diversity: Parametric prompt builder samples from 7 independent parameter
+spaces per call (scam sub-variant, register, length, emotional angle, sender persona,
+cultural context, channel), producing millions of unique combinations and eliminating
+structural repetition from static template cycling (addresses D-07).
+
 Threat-weighted distribution per D-12. Safe class is ~50% of total per D-13.
 Hard negatives included in safe class per D-09/D-10/D-11.
 
@@ -69,138 +74,527 @@ class ScamSample(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Scam prompt templates — concrete examples per vector (addresses review item 7)
-# Each set varies: channel, register, length, formality per D-07
-# Indirect "scam awareness educator" framing per Pitfall 1.4
+# Parametric prompt system — replaces static template cycling (D-07)
 # ---------------------------------------------------------------------------
+# build_scam_prompt() samples from 7 independent parameter spaces per call:
+#   12 sub-variants × 12 registers × 3 lengths × 5 emotional angles ×
+#   8 sender personas × 16 cultural contexts × 4 channels
+#   = millions of unique prompt combinations per vector, eliminating structural
+#   repetition caused by cycling a small fixed template list.
 
-SCAM_PROMPTS = {
+# Scam sub-variants per vector (specific scenario being depicted)
+SCAM_SUB_VARIANTS = {
     "crypto_investment": [
-        'Write an example SMS message (under 160 chars) that a scam awareness educator would use to train people to recognize a cryptocurrency investment scam. The message should promise high returns and include a shortened URL. Use casual language with minor typos. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="sms").',
-        'Write an example WhatsApp message from a scam awareness training manual showing a pig butchering scam. The sender pretends to be a friend sharing an investment tip. Medium length (3-5 sentences). Professional tone. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="whatsapp").',
-        'Write an example email body that a scam educator would use to demonstrate a fake crypto trading platform scam. Include a sense of urgency about a limited-time opportunity. Formal corporate style. 1 paragraph. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="email").',
-        'Write an example app notification text for a scam awareness class showing a fraudulent crypto exchange alert. Short (1-2 sentences). Uses authority language. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="app_notification").',
-        'Write an example SMS from a scam training manual showing a Bitcoin ATM scam where the sender impersonates a government agent demanding payment in crypto. Include grammatical errors typical of non-native English speakers. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="sms").',
-        'Write an example WhatsApp message from a scam awareness training program demonstrating a "guaranteed profit" crypto trading bot scam. The message references a fake influencer endorsement. 3-4 sentences. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="whatsapp").',
-        'Write an example email that scam educators use to show a fake crypto airdrop scam, asking recipients to connect their wallet. Formal, corporate style with suspicious grammar. 2 short paragraphs. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="email").',
-        'Write an example SMS for a scam awareness workshop showing a DeFi yield farming scam offering 300% APY. Casual register, urgent framing, short. Return JSON with fields: text, label (="scam"), vector (="crypto_investment"), channel (="sms").',
+        "pig butchering scam — scammer builds a romantic or friendship connection over weeks before steering victim into a fake trading platform",
+        "fake cryptocurrency exchange promising guaranteed high returns with a professional-looking website and fake withdrawal testimonials",
+        "Bitcoin ATM scam — impersonates a government official or court officer demanding a tax or fine payment in crypto",
+        "DeFi yield farming scheme offering unsustainable APY (e.g., 300–800%) through a fraudulent liquidity pool",
+        "AI-powered crypto trading bot claiming fully automated daily profits with no risk",
+        "fake celebrity or financial influencer endorsement for a new token launch, with the celebrity name mentioned",
+        "NFT minting presale scam where the platform collects fees and disappears before delivery",
+        "pump-and-dump signal group urging members to buy an obscure token before it 'moons' in hours",
+        "fake Initial Coin Offering (ICO) promising early investor returns of 10x–100x",
+        "crypto cloud mining contract scam — fake dashboard shows growing balance that can never be withdrawn",
+        "fake arbitrage bot promising risk-free profits by exploiting exchange price differences",
+        "referral pyramid scheme disguised as a legitimate crypto investment club with tiered bonuses",
     ],
     "romance_grooming": [
-        'Write an example WhatsApp message that a scam awareness educator would use to train people to recognize a romance scam. The sender builds a false emotional connection before requesting money for a supposed emergency. 4-5 sentences. Use warm, intimate language. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="whatsapp").',
-        'Write an example email from a scam training manual showing an online dating scam where the sender claims to be a military officer deployed overseas who needs money for a flight home. Formal, emotional. 1 paragraph. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="email").',
-        'Write an example SMS that a scam awareness class uses to demonstrate a romance pig-butchering scam. The sender pretends they texted the wrong number, then starts a conversation. Casual, friendly register. 3-4 short messages combined. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="sms").',
-        'Write an example app message from a scam training program showing a fake dating app match who quickly escalates to asking for gift cards. Uses flattery and urgency. Medium length. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="app_notification").',
-        'Write an example WhatsApp conversation excerpt used in scam awareness training where someone claiming to be a lonely widower abroad builds rapport over several messages before mentioning a financial crisis. 5-6 sentences. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="whatsapp").',
-        'Write an example email for a scam awareness workshop showing a romance scammer who claims to be a wealthy investor, sends a fake check, then asks the victim to forward "customs fees". 2 paragraphs. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="email").',
-        'Write an example SMS that scam educators use to show how romance scammers prime victims to send cryptocurrency by first establishing trust through friendly texts. Casual language, gradual emotional escalation. 3-4 sentences. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="sms").',
-        'Write an example WhatsApp message from a scam awareness training on romance grooming where the scammer uses excessive flattery and fake shared interests to create false intimacy quickly. Very personal tone. 4-5 sentences. Return JSON with fields: text, label (="scam"), vector (="romance_grooming"), channel (="whatsapp").',
+        "US Army soldier or officer deployed overseas who fell in love online and needs emergency funds",
+        "wealthy widowed engineer or doctor seeking companionship who pivots to a business investment request",
+        "'wrong number' text that evolves into a friendship and then pivots to a crypto investment opportunity",
+        "offshore oil rig or construction contractor who cannot access their bank and needs a wire transfer",
+        "foreign doctor volunteering with an NGO abroad who needs help with unexpected medical or travel bills",
+        "business traveler stranded abroad after theft who needs money for a flight home",
+        "online dating match who love-bombs the victim rapidly before requesting gift cards or wire transfer",
+        "fake celebrity directly messaging fans to build a relationship before requesting fees or donations",
+        "divorced parent claiming a child has a sudden medical emergency requiring an urgent money transfer",
+        "scammer building weeks of rapport before revealing a 'highly profitable investment opportunity' to join",
+        "fake Instagram or TikTok influencer offering exclusive content in exchange for gift card payments",
+        "elderly pen-pal scam that migrates online before pivoting to an emergency financial request",
     ],
     "tech_support": [
-        'Write an example SMS that a scam awareness educator would use to show a fake Microsoft tech support alert telling the user their computer has been hacked and to call a toll-free number. Urgent, authoritative. Short. Return JSON with fields: text, label (="scam"), vector (="tech_support"), channel (="sms").',
-        'Write an example email from a scam training manual showing a fake Apple support message claiming the user\'s iCloud account was compromised and they must verify payment details. Corporate style. 1 paragraph. Return JSON with fields: text, label (="scam"), vector (="tech_support"), channel (="email").',
-        'Write an example app notification that scam educators use to demonstrate a fake antivirus alert saying the device is infected with 5 viruses and must be cleaned immediately. Short, alarming. Return JSON with fields: text, label (="scam"), vector (="tech_support"), channel (="app_notification").',
-        'Write an example WhatsApp message from a scam awareness class showing a fake tech support scammer claiming to be from Amazon AWS who needs remote access to fix a billing issue. Professional tone with technical jargon. 3 sentences. Return JSON with fields: text, label (="scam"), vector (="tech_support"), channel (="whatsapp").',
-        'Write an example email used in scam awareness training that mimics a legitimate Windows Defender alert, claiming the user\'s license expired and directing them to a fake renewal page. Semi-formal. 2 short paragraphs. Return JSON with fields: text, label (="scam"), vector (="tech_support"), channel (="email").',
-        'Write an example SMS for a scam awareness workshop showing a fake Google account security alert with a fake 1-800 number. Mimics official Google branding language. Short, urgent. Return JSON with fields: text, label (="scam"), vector (="tech_support"), channel (="sms").',
+        "fake Microsoft alert claiming Windows has a critical virus and a helpline number must be called immediately",
+        "fake Apple support claiming iCloud was compromised and payment details must be re-entered",
+        "fake Google security alert claiming Gmail or Drive was accessed from an unknown device",
+        "fake antivirus subscription expiry claiming the device is completely unprotected after auto-renewal failure",
+        "fake ISP or router alert claiming the internet connection was hacked and a technician needs device access",
+        "fake Amazon AWS billing error claiming the account will be suspended without immediate payment verification",
+        "fake bank app security alert claiming the mobile banking app detected a suspicious login attempt",
+        "fake Netflix claiming payment failed and the account will be permanently deleted without update",
+        "fake PayPal alert claiming an unusual large transaction needs immediate confirmation to be reversed",
+        "fake social media platform claiming the account was flagged for policy violations and will be deleted",
+        "fake corporate IT helpdesk email claiming an employee's work account was locked for security reasons",
+        "fake McAfee or Norton renewal claiming a large charge appeared and a refund is available via a phone number",
     ],
     "government_impersonation": [
-        'Write an example SMS that a scam awareness educator would use to show a fake IRS message claiming the recipient owes back taxes and faces immediate arrest if they don\'t pay via gift cards. Urgent, threatening. Short. Return JSON with fields: text, label (="scam"), vector (="government_impersonation"), channel (="sms").',
-        'Write an example email from a scam training manual showing a fake Social Security Administration notice claiming the recipient\'s SSN was used in criminal activity and they must call a number immediately to avoid suspension. Formal, official-looking. 2 paragraphs. Return JSON with fields: text, label (="scam"), vector (="government_impersonation"), channel (="email").',
-        'Write an example WhatsApp message that scam educators use to show an impersonation of USCIS (immigration agency) claiming the recipient\'s visa application has an issue requiring immediate payment. Non-native English register. 3-4 sentences. Return JSON with fields: text, label (="scam"), vector (="government_impersonation"), channel (="whatsapp").',
-        'Write an example app notification from a scam awareness class showing a fake Medicare alert saying benefits will be suspended unless the recipient verifies their information. Short, official-sounding. Return JSON with fields: text, label (="scam"), vector (="government_impersonation"), channel (="app_notification").',
-        'Write an example SMS for a scam awareness workshop showing a fake local police department message claiming outstanding warrants and requiring payment via wire transfer to avoid arrest. Urgent, threatening tone. Short. Return JSON with fields: text, label (="scam"), vector (="government_impersonation"), channel (="sms").',
-        'Write an example email used in scam awareness training showing a fake IRS audit notice with a case number, demanding immediate response and claiming all bank accounts will be frozen. Formal corporate style. 2 paragraphs. Return JSON with fields: text, label (="scam"), vector (="government_impersonation"), channel (="email").',
+        "IRS Revenue Officer claiming back taxes are owed and immediate arrest will occur without gift card payment",
+        "Social Security Administration claiming the victim's SSN was used in drug trafficking and will be suspended",
+        "USCIS or CBP officer claiming a visa or immigration case has a critical error requiring immediate payment",
+        "Medicare representative claiming benefits will be suspended unless the Medicare card number is re-verified",
+        "local police or county sheriff claiming there is an active arrest warrant that can be resolved by payment",
+        "US Customs and Border Protection claiming a seized package contained illegal goods linked to the recipient",
+        "DEA or FBI agent claiming the victim's bank account is linked to a drug cartel investigation",
+        "State DMV claiming the driver's license will be suspended within 24 hours for an unpaid fine",
+        "IRS audit notice with a fake case number claiming all bank accounts will be frozen by end of business",
+        "Social Security overpayment demand claiming thousands must be repaid immediately to avoid prosecution",
+        "federal student loan servicer claiming a forgiveness application was rejected and full balance is due",
+        "city court claiming missed jury duty will result in immediate arrest unless a fine is paid online today",
     ],
     "phishing": [
-        'Write an example email that a scam awareness educator would use to show a phishing attempt mimicking a Chase bank security alert asking the recipient to verify their account by clicking a link. Corporate style, urgent. 2 short paragraphs. Return JSON with fields: text, label (="scam"), vector (="phishing"), channel (="email").',
-        'Write an example SMS from a scam training manual showing a fake PayPal account suspension notice with a suspicious link to restore access. Urgent, short. Return JSON with fields: text, label (="scam"), vector (="phishing"), channel (="sms").',
-        'Write an example WhatsApp message that scam educators use to show a phishing attack using a fake shared document link from what appears to be a coworker. Casual, professional. 2 sentences. Return JSON with fields: text, label (="scam"), vector (="phishing"), channel (="whatsapp").',
-        'Write an example email used in scam awareness training that mimics an Amazon order confirmation with a fake "report unauthorized purchase" link leading to credential theft. Semi-formal. 2 paragraphs. Return JSON with fields: text, label (="scam"), vector (="phishing"), channel (="email").',
-        'Write an example app notification from a scam awareness workshop showing a fake Instagram security alert asking the user to tap a link to secure their account. Short, alarming. Return JSON with fields: text, label (="scam"), vector (="phishing"), channel (="app_notification").',
-        'Write an example SMS for scam awareness training showing a fake bank fraud alert with a spoofed short code asking the recipient to call back on a fake number. Short, urgent. Minor grammatical errors. Return JSON with fields: text, label (="scam"), vector (="phishing"), channel (="sms").',
+        "bank security alert claiming online banking was locked due to suspicious transactions with a re-login link",
+        "PayPal suspension notice claiming the account was limited for review and identity must be verified via link",
+        "Amazon unauthorized purchase alert asking credit card details to be verified to dispute the charge",
+        "Microsoft 365 or Outlook credential expiry claiming the user must re-authenticate via a provided link",
+        "Netflix payment failure claiming the subscription will be immediately cancelled without billing update",
+        "Apple ID lock claiming suspicious activity was detected and the account must be unlocked via a link",
+        "Google Workspace shared document from what appears to be a coworker requiring login credentials to view",
+        "Instagram or Facebook account lockout claiming a copyright strike requires identity verification via link",
+        "crypto exchange phishing claiming a large withdrawal was initiated and must be cancelled via a link",
+        "fake package delivery phishing claiming a customs fee must be paid online to release a held parcel",
+        "HR or payroll department phishing targeting employees to verify direct deposit or W-2 information",
+        "fake DocuSign or Adobe Sign document requiring login credentials to access a time-sensitive contract",
     ],
     "urgency_payment": [
-        'Write an example SMS that a scam awareness educator would use to show a grandparent scam where someone claims to be a grandchild arrested and needing bail money immediately. Emotional, urgent. 2-3 sentences. Return JSON with fields: text, label (="scam"), vector (="urgency_payment"), channel (="sms").',
-        'Write an example email from a scam training manual showing a fake "CEO email fraud" where a scammer impersonates a company executive and demands an urgent wire transfer. Formal, authoritative. 1 paragraph. Return JSON with fields: text, label (="scam"), vector (="urgency_payment"), channel (="email").',
-        'Write an example WhatsApp message that scam educators use to show a friend or family impersonation scam where someone claiming to be a friend texts from a new number asking for emergency money for a hospital bill. Casual, distressed. 3-4 sentences. Return JSON with fields: text, label (="scam"), vector (="urgency_payment"), channel (="whatsapp").',
-        'Write an example SMS for a scam awareness class showing a fake utility shutoff threat demanding immediate payment to avoid power disconnection within 1 hour. Threatening, urgent. Short. Return JSON with fields: text, label (="scam"), vector (="urgency_payment"), channel (="sms").',
-        'Write an example email used in scam awareness training showing a fake landlord demanding an urgent Zelle payment for an unexpected maintenance fee or risk eviction. Semi-formal. 2 short paragraphs. Return JSON with fields: text, label (="scam"), vector (="urgency_payment"), channel (="email").',
-        'Write an example app notification from a scam awareness workshop showing a fake payment app alert claiming an unauthorized transaction requires immediate confirmation or the account will be locked. Short, alarming. Return JSON with fields: text, label (="scam"), vector (="urgency_payment"), channel (="app_notification").',
+        "grandparent scam — someone claims to be a grandchild arrested and desperately needs bail money wired",
+        "CEO fraud — scammer impersonates a company executive demanding a confidential urgent wire transfer",
+        "friend-in-distress scam from an unknown new number claiming a friend was robbed and needs money immediately",
+        "utility shutoff threat claiming electricity or water will be cut within one hour without immediate payment",
+        "fake landlord demanding an emergency Zelle or Venmo payment for an unexpected fee or eviction threat",
+        "kidnapping extortion claiming a family member is held and a ransom must be wired to avoid harm",
+        "hospital bill emergency claiming a family member needs urgent surgery requiring upfront payment now",
+        "bail bond scam claiming a family member was arrested abroad and needs funds wired urgently",
+        "stranded traveler scam from a hacked friend's email claiming their wallet was stolen and they need help",
+        "fake debt collector threatening immediate lawsuit and wage garnishment for an unrecognized old debt",
+        "emergency home repair scam claiming insurance requires upfront payment within 24 hours or coverage lapses",
+        "overdue invoice scam targeting a small business owner with a fake vendor bill demanding same-day payment",
     ],
     "remote_access": [
-        'Write an example email that a scam awareness educator would use to show a fake tech support scam asking the recipient to install AnyDesk or TeamViewer to fix a supposed billing error on their account. Formal, corporate. 2 paragraphs. Return JSON with fields: text, label (="scam"), vector (="remote_access"), channel (="email").',
-        'Write an example SMS from a scam training manual showing a fake bank message asking the customer to download a "secure banking app" (actually remote access tool) to resolve a security issue. Urgent, short. Return JSON with fields: text, label (="scam"), vector (="remote_access"), channel (="sms").',
-        'Write an example WhatsApp message that scam educators use to show a scammer posing as ISP tech support asking the user to install a screen sharing app to fix slow internet. Professional, helpful tone. 3-4 sentences. Return JSON with fields: text, label (="scam"), vector (="remote_access"), channel (="whatsapp").',
-        'Write an example email used in scam awareness training showing a fake Microsoft email asking the user to join a "remote diagnostics session" by installing software from a suspicious domain. Semi-formal. 2 short paragraphs. Return JSON with fields: text, label (="scam"), vector (="remote_access"), channel (="email").',
-        'Write an example app notification from a scam awareness class showing a fake "account security scan" alert asking the user to allow screen access to a supposed security app. Short, technical-sounding. Return JSON with fields: text, label (="scam"), vector (="remote_access"), channel (="app_notification").',
-        'Write an example SMS for scam awareness training showing someone posing as an Amazon refund processor who needs to install a "refund app" on the phone to process a large overcharge. Helpful, conversational tone. 2-3 sentences. Return JSON with fields: text, label (="scam"), vector (="remote_access"), channel (="sms").',
+        "fake tech support asking the victim to install AnyDesk or TeamViewer to fix a Microsoft security breach",
+        "fake bank representative asking the victim to install a 'secure verification tool' that is remote access software",
+        "fake ISP technician asking the victim to install a 'router diagnostic application' to fix slow internet",
+        "fake Amazon refund processor asking the victim to install a 'refund application' to receive an overcharge",
+        "fake Microsoft Windows diagnostic requiring a remote session to review detected system errors",
+        "fake IT helpdesk instructing an employee to allow a remote desktop session to fix a locked company account",
+        "fake Social Security technician asking the victim to install software to protect their benefits account",
+        "fake antivirus support asking the victim to allow screen sharing to remove a detected critical threat",
+        "fake bank fraud team asking the victim to install a 'fraud investigation app' to secure the account",
+        "tech support pop-up with a toll-free number — caller instructs victim to install remote access software",
+        "fake government IT asking the victim to install software to 'securely file taxes or verify benefits online'",
+        "fake crypto exchange support asking the victim to share their screen to 'verify wallet ownership'",
     ],
     "lottery_reward": [
-        'Write an example SMS that a scam awareness educator would use to show a fake lottery win notification claiming the recipient won $50,000 and must pay processing fees to collect. Excited, congratulatory tone. Under 160 chars. Return JSON with fields: text, label (="scam"), vector (="lottery_reward"), channel (="sms").',
-        'Write an example email from a scam training manual showing a fake international prize draw notification (e.g., "United Nations Lottery") that requires the recipient to pay a release fee to claim their winnings. Formal, official-looking. 2 paragraphs. Return JSON with fields: text, label (="scam"), vector (="lottery_reward"), channel (="email").',
-        'Write an example WhatsApp message that scam educators use to show a fake giveaway scam impersonating a celebrity who selected the user as a winner of a prize package. Enthusiastic, informal. 3-4 sentences. Return JSON with fields: text, label (="scam"), vector (="lottery_reward"), channel (="whatsapp").',
-        'Write an example app notification from a scam awareness class showing a fake in-app reward claiming the user is the 1 millionth visitor and won an iPhone. Must claim within 10 minutes. Short, urgent. Return JSON with fields: text, label (="scam"), vector (="lottery_reward"), channel (="app_notification").',
-        'Write an example SMS for a scam awareness workshop showing a fake scratch card lottery win where the recipient must text back a code and pay a small "registration fee". Casual, excited. Short. Return JSON with fields: text, label (="scam"), vector (="lottery_reward"), channel (="sms").',
-        'Write an example email used in scam awareness training showing a fake Amazon customer survey reward claiming the recipient completed a survey and won a gift, needing credit card details for "shipping". Semi-formal. 1 paragraph. Return JSON with fields: text, label (="scam"), vector (="lottery_reward"), channel (="email").',
+        "national lottery win claiming the victim's ticket matched the jackpot and processing fees must be paid",
+        "UN or international prize draw claiming the victim was randomly selected from a global pool of millions",
+        "celebrity giveaway claiming the victim was personally chosen as a social media contest winner",
+        "one-millionth-visitor popup claiming the victim won a smartphone or large cash prize, claim within 10 min",
+        "scratch card or text-to-win lottery claiming a prize code was found and a registration fee is required",
+        "Amazon customer survey reward claiming the victim qualified for a free gift but needs card details for shipping",
+        "airline frequent flyer bonus claiming unclaimed miles are expiring today and a fee activates the reward",
+        "hotel loyalty reward claiming a free stay was earned but a small redemption fee must be paid to redeem",
+        "social media follower giveaway claiming the victim was randomly selected as the sole winner",
+        "tax refund windfall claiming the victim is owed a large government unclaimed refund they never filed for",
+        "cashback or rebate scam claiming the victim is owed hundreds in unclaimed rewards from past purchases",
+        "lottery-backed investment scheme claiming the victim won a prize that must be reinvested to access cash",
     ],
 }
 
+# Writing register and language style
+REGISTERS = [
+    "fluent casual English with natural contractions and minor autocorrect-style typos",
+    "non-native English with wrong prepositions, missing articles, and awkward phrase structure",
+    "formal professional English with no contractions, corporate vocabulary, and full sentences",
+    "urgent clipped language with ALL CAPS on key words and multiple exclamation marks",
+    "deliberate misspellings and SMS abbreviations (u, ur, pls, gonna, wanna) throughout",
+    "polished business English that reads slightly over-formal or machine-translated",
+    "emojis strategically placed to build excitement, urgency, or false legitimacy",
+    "warm and personal first-name-basis tone with genuine emotional care expressed",
+    "broken English suggesting machine translation from another language",
+    "calm, matter-of-fact authoritative tone — stating legal consequences without emotional language",
+    "formal opener that gradually shifts to aggressive or threatening language as urgency escalates",
+    "heavy use of official-looking formatting: bullet points, case numbers, reference codes, deadlines",
+]
+
+# Length targets per channel
+LENGTHS = {
+    "sms": [
+        "under 100 characters",
+        "120–160 characters (standard SMS length)",
+        "2–3 short sentences fitting within a single SMS",
+    ],
+    "email": [
+        "1 short paragraph with a subject line (3–4 sentences total)",
+        "2 paragraphs — first establishes context or authority, second issues the request or threat",
+        "formal letter format with greeting, 2-sentence body, and a sign-off with name and title",
+    ],
+    "whatsapp": [
+        "2–3 sentences, casual and direct",
+        "4–6 sentences that build rapport or context before pivoting to the request",
+        "2–3 short messages separated by line breaks, simulating a real chat exchange",
+    ],
+    "app_notification": [
+        "1 sentence push notification style with a clear action",
+        "title line plus 1–2 sentence body in standard notification format",
+        "short alert with urgency indicator and an action button label mentioned in brackets",
+    ],
+}
+
+# Emotional manipulation angles per vector
+EMOTIONAL_ANGLES = {
+    "crypto_investment": [
+        "greed — guaranteed fast profits with specific return percentages cited",
+        "FOMO — limited-time exclusive access window closing within hours",
+        "social proof — well-known celebrity or influencer endorsement with name mentioned",
+        "authority — official-sounding platform name with regulatory-sounding language",
+        "reciprocity — victim was personally selected for a private deal not available to the public",
+    ],
+    "romance_grooming": [
+        "love and longing — shared future, deep connection, and the victim being their only hope",
+        "sympathy — devastating personal tragedy (death, illness, war injury) creating helplessness",
+        "flattery — victim is uniquely beautiful, kind, and unlike anyone the scammer has ever met",
+        "guilt — after everything shared, abandoning them now would be a betrayal",
+        "reciprocity — I trusted you with my deepest secrets and now need you to trust me in return",
+    ],
+    "tech_support": [
+        "fear — device is actively compromised right now and data is being exfiltrated",
+        "urgency — access will be permanently and irreversibly lost within 2 hours without action",
+        "authority — official brand name, ticket numbers, employee IDs, and technical jargon",
+        "helpfulness — we detected the problem proactively and are reaching out to protect you",
+        "loss aversion — all saved files, photos, contacts, and accounts will be permanently deleted",
+    ],
+    "government_impersonation": [
+        "fear of arrest — warrant activates within 2 hours and federal agents will arrive at the door",
+        "authority — badge number, federal case number, official agency seal described in text",
+        "shame — account is linked to criminal activity; do not tell family members or it gets worse",
+        "time pressure — the resolution window closes before end of business today, no extensions",
+        "confusion — dense bureaucratic language and legal citations designed to overwhelm",
+    ],
+    "phishing": [
+        "fear — unauthorized account access is happening in real time right now",
+        "urgency — account access permanently revoked if not confirmed within 24 hours",
+        "loss aversion — subscription history, saved data, and purchase records will all be deleted",
+        "authority — impersonates an official brand with exact correct terminology and formatting",
+        "curiosity — an important person shared a document or message that requires login to see",
+    ],
+    "urgency_payment": [
+        "panic — a loved one is in physical danger, injured, or in serious legal jeopardy right now",
+        "guilt — the victim is the only person who knows and the only one who can help",
+        "authority — executive directive, official agency mandate, or law enforcement order",
+        "time pressure — the payment window closes in 30 minutes and consequences are irreversible",
+        "social obligation — family member or closest friend is counting solely on the victim",
+    ],
+    "remote_access": [
+        "fear — device is actively infected or money is being drained from the account right now",
+        "helpfulness — a certified technician is standing by and can resolve this immediately for free",
+        "authority — official IT representative from a recognized brand using correct terminology",
+        "urgency — the problem will spread to all connected devices within the next hour if not fixed",
+        "trust established — scammer references the victim's real account details to appear legitimate",
+    ],
+    "lottery_reward": [
+        "excitement — congratulations, you are a confirmed winner of a specific large dollar amount",
+        "FOMO — prize expires or is reallocated to another winner if not claimed within 24 hours",
+        "reciprocity — you earned this through your own purchases or activity and it is rightfully yours",
+        "social proof — winner status verified, funds are sitting in a holding account waiting for you",
+        "greed — a small mandatory processing fee is all that stands between the victim and a windfall",
+    ],
+}
+
+# Sender personas per vector (who the scammer claims to be)
+SENDER_PERSONAS = {
+    "crypto_investment": [
+        "a close friend who just made a huge profit and wants to share the opportunity exclusively",
+        "a licensed investment advisor from a named crypto asset management firm",
+        "a well-known celebrity or financial influencer with their social handle mentioned",
+        "an automated alert from a named cryptocurrency exchange or trading platform",
+        "the admin of an exclusive private trading or investment group",
+        "a stranger who accidentally messaged the wrong number but keeps engaging",
+        "a former coworker or college classmate reconnecting through social media",
+        "an anonymous market insider sharing early signals before a major price move",
+    ],
+    "romance_grooming": [
+        "a US Army soldier or Special Forces officer currently deployed in a conflict zone",
+        "a widowed petroleum engineer on a remote offshore oil rig",
+        "a foreign doctor volunteering with Doctors Without Borders or UNICEF",
+        "an attractive stranger who matched on a mainstream dating app",
+        "a wealthy entrepreneur or tech investor who travels constantly for business",
+        "a celebrity or public figure who appears to have messaged the victim directly",
+        "a recently divorced single parent dealing with a custody battle and financial stress",
+        "a pen pal who moved contact from a letter-writing platform to WhatsApp or email",
+    ],
+    "tech_support": [
+        "Microsoft Security Team or Certified Microsoft Support Technician",
+        "Apple Security Response Team or iCloud Account Protection",
+        "Google Account Protection or Gmail Security Team",
+        "ISP Technical Support or Network Security Operations Center",
+        "McAfee, Norton, or Avast Customer Support and Renewal Team",
+        "Amazon Customer Service or AWS Account Management",
+        "bank IT Security Department or Fraud Prevention Team",
+        "Google Workspace or Microsoft 365 IT Helpdesk",
+    ],
+    "government_impersonation": [
+        "IRS Revenue Officer with a badge number and federal case reference",
+        "Social Security Administration agent with a supervisor contact number",
+        "US Customs and Border Protection officer at a named port of entry",
+        "Medicare or Medicaid benefits representative",
+        "local county sheriff's department with an active warrant number",
+        "FBI or DEA special agent with a federal investigation case number",
+        "USCIS or Department of Homeland Security compliance officer",
+        "State Department of Motor Vehicles enforcement division",
+    ],
+    "phishing": [
+        "the security or fraud team of the impersonated brand (Chase, PayPal, Apple, etc.)",
+        "corporate IT or helpdesk department sending to a work email address",
+        "a trusted contact whose account was compromised and is unknowingly forwarding a malicious link",
+        "an automated system security alert with no personal sender name shown",
+        "HR or payroll department using an internal-sounding domain name",
+        "a legal or compliance officer handling a time-sensitive regulatory matter",
+    ],
+    "urgency_payment": [
+        "a grandchild or young adult family member who was just arrested",
+        "a company CEO or CFO demanding a strictly confidential same-day wire transfer",
+        "a close friend texting from an unfamiliar new number after losing their phone",
+        "a utility company or service provider threatening immediate service disconnection",
+        "a landlord or property manager demanding emergency payment via Zelle or Venmo",
+        "an anonymous caller claiming to hold a family member and demanding ransom",
+    ],
+    "remote_access": [
+        "Microsoft Certified Support Technician with a ticket number",
+        "bank fraud investigation specialist calling about a detected breach",
+        "ISP field technician dispatched to address a network security incident",
+        "Amazon refund processing department following up on a large overcharge",
+        "antivirus or cybersecurity company customer support and remediation agent",
+        "corporate IT helpdesk or system administrator reaching out proactively",
+        "Social Security Administration IT department protecting the victim's benefits account",
+    ],
+    "lottery_reward": [
+        "national lottery prize distribution authority with an official reference number",
+        "UN International Prize Committee or global sweepstakes organization representative",
+        "a celebrity or brand ambassador personally confirming the winner",
+        "automated prize fulfillment center with a claim reference and deadline",
+        "airline or hotel loyalty rewards department notifying about expiring miles or nights",
+        "major retailer customer rewards or cashback department",
+    ],
+}
+
+# Cultural and demographic contexts — adds geographic and audience diversity
+CULTURAL_CONTEXTS = [
+    "targeting an adult in the United States",
+    "targeting an adult in the United Kingdom",
+    "targeting an adult in Canada",
+    "targeting an adult in Australia or New Zealand",
+    "targeting a recent immigrant to the US who may be anxious about deportation or legal status",
+    "targeting a retiree over 65 who is less familiar with current digital scam tactics",
+    "targeting a college student under financial stress with student loan debt",
+    "targeting a small business owner responsible for payroll and vendor payments",
+    "targeting a job seeker who recently posted their resume publicly on LinkedIn or Indeed",
+    "targeting a homeowner who recently listed their property or vehicle for sale online",
+    "written in a style suggesting the scammer is based in West Africa — characteristic phrases and warmth",
+    "written in a style suggesting Eastern European origin — characteristic grammar patterns and directness",
+    "written in a style suggesting South Asian origin — characteristic honorifics and phrasing",
+    "targeting someone in a rural area with limited prior exposure to online fraud",
+    "targeting a working parent managing multiple financial responsibilities with limited time to verify claims",
+    "targeting someone who recently experienced a job loss, divorce, or financial setback",
+]
+
+
+def build_scam_prompt(vector: str, channel: str) -> str:
+    """Build a unique scam training prompt by sampling from 7 independent parameter spaces.
+
+    Each call produces a different combination from millions of possibilities,
+    eliminating structural repetition caused by static template cycling (D-07).
+    """
+    sub_variant = random.choice(SCAM_SUB_VARIANTS[vector])
+    register = random.choice(REGISTERS)
+    length = random.choice(LENGTHS[channel])
+    emotion = random.choice(EMOTIONAL_ANGLES[vector])
+    persona = random.choice(SENDER_PERSONAS[vector])
+    context = random.choice(CULTURAL_CONTEXTS)
+
+    return (
+        f"Write a synthetic example message for a scam detection training dataset. "
+        f"Scenario: {sub_variant}. "
+        f"Channel: {channel}. "
+        f"Sender claims to be: {persona}. "
+        f"Primary manipulation angle: {emotion}. "
+        f"Writing style: {register}. "
+        f"Demographic context: {context}. "
+        f"Length: {length}. "
+        f"Write the actual message the scammer would send, with realistic specific details "
+        f"(dollar amounts, platform names, case numbers, dates, URLs where appropriate). "
+        f"Return JSON with fields: text (the message text only), "
+        f"label (='scam'), vector (='{vector}'), channel (='{channel}')."
+    )
+
+
 # ---------------------------------------------------------------------------
-# Safe class hard-negative prompts (addresses review item 6)
-# Domain-matched to corresponding scam vectors per D-11
-# No marketing/promotional — transactional only per D-10
+# Safe class parametric prompt system
 # ---------------------------------------------------------------------------
 
-SAFE_HARD_NEGATIVE_PROMPTS = {
+# Hard negative variants per category (domain-matched to scam vectors — D-11)
+# These are the most confusable legitimate messages that a scam detector must not flag.
+SAFE_HARD_NEG_VARIANTS = {
     "bank_alert": [
-        'Generate a realistic legitimate bank fraud alert SMS. Pattern: "Chase Fraud: Did you authorize $X at [Store]? Reply YES or NO. If not, call 1-800-XXX-XXXX." Use a real bank name. Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a legitimate bank security notification email body. The bank detected unusual login activity and asks the customer to verify. Include a real-looking but generic support phone number. 2-3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-        'Generate a legitimate credit card declined notification SMS. Pattern: "Your card ending in XXXX was declined at [Store] for $XX.XX. If this was you, no action needed." Short, factual. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic bank balance alert SMS for a low balance warning. Example: "Wells Fargo: Your checking account balance is $XX.XX, below your $100 alert threshold." Factual, non-urgent. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic bank account statement available notification email. Friendly, factual. Includes bank name and note that no action is needed. 2 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
+        "a real bank fraud alert asking if the customer authorized a recent charge, with merchant name and amount",
+        "a legitimate credit card declined notification with the merchant name and exact declined amount",
+        "a real bank low-balance threshold alert showing the current balance",
+        "a legitimate new device login confirmation with device type and approximate location",
+        "a real bank statement now available notification with the account last four digits",
+        "a legitimate large purchase confirmation alert sent to verify an unusual but real transaction",
+        "a real bank account transfer confirmation with recipient initials and the transferred amount",
+        "a legitimate bank scheduled maintenance notification with specific start and end times",
     ],
     "delivery": [
-        'Generate a realistic USPS delivery tracking SMS. Pattern: "USPS: Your package 9400XXXX is out for delivery. Track: usps.com/tracking". Short, factual, no urgency. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic FedEx delivery notification SMS with a tracking number and estimated delivery window. Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic UPS delivery confirmation email. Include tracking number, delivery date, and signature confirmation note. 2-3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-        'Generate a realistic Amazon order shipped notification SMS including the order number and a delivery date estimate. Factual, friendly. Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic USPS "delivered to mailbox" notification SMS. Include the tracking number and timestamp. Very short, factual. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic DHL delivery scheduled notification WhatsApp message with tracking number and delivery window. 2 sentences, no urgency. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="whatsapp").',
+        "a real USPS out-for-delivery SMS with a partial tracking number",
+        "a real FedEx estimated delivery SMS with a time window and tracking reference",
+        "a real UPS signature required notification with the tracking number and address",
+        "a real Amazon order shipped notification with the order number and estimated delivery date",
+        "a real DHL customs cleared notification with tracking and expected delivery day",
+        "a real package delivered notification with a timestamp and drop-off location description",
+        "a real delivery attempt failed notice with redelivery instructions and pickup location",
+        "a real USPS Informed Delivery email confirming expected mail pieces arriving today",
     ],
-    "twofa": [
-        'Generate a realistic 2FA verification code SMS. Pattern: "Your [Service] verification code is XXXXXX. Do not share this code. It expires in 10 minutes." Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic login verification email from a service like Google or Apple. "We noticed a sign-in from [Device] in [Location]. If this was you, no action needed." 2-3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-        'Generate a realistic bank one-time password (OTP) SMS for a wire transfer confirmation. Short, includes 6-digit code and instruction not to share. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic app 2FA push notification text: "[App] Login request from [Device]. Tap to approve or deny." Very short, non-urgent. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="app_notification").',
-        'Generate a realistic account recovery verification code email from a well-known service. Includes code, expiry time, and clear note that the user requested this. 3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
+    "two_factor_auth": [
+        "a real 2FA SMS code for logging into an online account",
+        "a real bank OTP SMS for approving a wire or ACH transfer",
+        "a real app push notification requesting approval or denial of a new login attempt",
+        "a real email from a major service about a sign-in from a new device with device name and city",
+        "a real account recovery code SMS triggered by a legitimate password reset request",
+        "a real email confirmation that a new phone number was added to an account",
+        "a real backup verification code SMS for an authenticator app setup",
     ],
-    "medical": [
-        'Generate a realistic pharmacy prescription ready notification SMS. Pattern: "[Pharmacy]: Your prescription for [Generic Med Name] is ready for pickup at [Location]." Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic medical appointment reminder SMS. Pattern: "Reminder: You have an appointment with Dr. [Name] on [Date] at [Time]. Reply C to confirm." Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic doctor appointment confirmation email from a medical office. Includes date, time, doctor name, location, and cancellation policy note. 3-4 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-        'Generate a realistic prescription refill reminder SMS from a pharmacy auto-refill program. Friendly, factual. Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-        'Generate a realistic lab results notification from a healthcare portal: results are ready to view in the patient portal. No medical details, just a notification. 2 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
+    "medical_pharmacy": [
+        "a real pharmacy prescription ready for pickup SMS with the pharmacy name and store location",
+        "a real doctor appointment reminder SMS with the physician name and clinic address",
+        "a real lab results available notification from a patient portal with the portal name",
+        "a real prescription auto-refill shipped notification with the medication category",
+        "a real medical insurance pre-authorization approval for a scheduled procedure",
+        "a real telehealth appointment confirmation with the date, time, and video join link",
+        "a real vaccination or booster reminder from a health system with appointment details",
+    ],
+    "legitimate_tech": [
+        "a real app update available notification from the App Store or Google Play",
+        "a real software license renewal reminder with the exact annual price and renewal date",
+        "a real scheduled maintenance downtime notification from a named cloud service",
+        "a real password successfully changed confirmation with the timestamp it occurred",
+        "a real account email address change confirmation asking to contact support if not requested",
+        "a real storage quota warning from a cloud service showing current usage vs. limit",
+        "a real browser or operating system automatic update completed notification",
+    ],
+    "legitimate_government": [
+        "a real vehicle registration renewal reminder from the DMV with the fee amount and deadline",
+        "a real USPS mail hold successfully scheduled confirmation with dates",
+        "a real jury duty summons excerpt with the courthouse address and required reporting date",
+        "a real voter registration confirmation with the county election board name",
+        "a real property tax payment confirmation with the parcel number and amount paid",
+        "a real passport renewal reminder from the State Department with the expiry date shown",
+        "a real census completion confirmation with a reference number",
     ],
 }
 
-# Normal transactional safe prompts (~75% of safe class, not hard negatives)
-SAFE_NORMAL_PROMPTS = [
-    'Generate a realistic order confirmation SMS from an online retailer. Includes order number, item count, and expected delivery range. Factual, friendly. Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-    'Generate a realistic meeting reminder calendar notification. Includes meeting title, time, and video call link. Short, factual. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="app_notification").',
-    'Generate a realistic subscription renewal confirmation email. States the service name, renewal date, and amount charged. No urgency. 2-3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-    'Generate a realistic travel itinerary confirmation SMS from an airline. Flight number, departure time, and gate. Short, factual. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-    'Generate a realistic gym membership check-in SMS confirmation. Friendly, factual. Under 100 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-    'Generate a realistic customer service follow-up email asking if a support ticket issue was resolved. Friendly, professional. 2 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-    'Generate a realistic ride-sharing pickup confirmation SMS: driver name, car model, plate, ETA. Short, factual. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-    'Generate a realistic job application acknowledgment email. States the role applied for, confirms receipt, and says the team will review shortly. 2-3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-    'Generate a realistic food delivery order confirmed SMS with estimated delivery time. Friendly, short. Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-    'Generate a realistic hotel reservation confirmation WhatsApp message. Includes dates, room type, and check-in instructions. 3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="whatsapp").',
-    'Generate a realistic event ticket purchase confirmation SMS. Includes event name, date, venue, and seat. Under 160 chars. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-    'Generate a realistic password change notification email from a web service. States the change was made and provides a support contact if the user did not request it. 2-3 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
-    'Generate a realistic utility bill payment confirmation SMS. Includes utility type, amount paid, and confirmation number. Factual, short. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="sms").',
-    'Generate a realistic daily step goal achievement notification from a fitness app. Short, encouraging, factual. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="app_notification").',
-    'Generate a realistic professional networking site connection request notification email. Friendly, professional. Includes the person\'s name and role. 2 sentences. Return JSON with fields: text, label (="safe"), vector (="safe"), channel (="email").',
+# Normal transactional safe variants (clearly legitimate, broad coverage)
+SAFE_TRANSACTIONAL_VARIANTS = [
+    "an order confirmation SMS with the order number, item summary, and delivery estimate",
+    "a shipping confirmation email with the tracking number and carrier name",
+    "a return label issued confirmation with the return reason and refund timeline",
+    "a refund processed notification with the amount and the payment method it was returned to",
+    "a post-purchase product review request from a verified retailer",
+    "an airline booking confirmation SMS with the flight number, departure time, and gate",
+    "a hotel check-in instructions email with arrival time, room type, and building access details",
+    "a ride-share driver en-route notification with driver name, car model, plate, and ETA",
+    "a flight delay notification with the updated departure time and new gate",
+    "a car rental reservation confirmation with pickup location, vehicle class, and rate",
+    "a calendar meeting reminder with the meeting title, organizer name, time, and video join link",
+    "a job application acknowledgment email confirming receipt with the role title mentioned",
+    "a job interview scheduled confirmation with interviewer name, time, format, and location",
+    "a professional networking connection request notification with the sender's name and current title",
+    "a subscription renewal confirmation email with the service name and exact amount charged",
+    "a subscription cancellation confirmation with the effective end date",
+    "a free trial ending reminder with the plan it converts to and the upcoming monthly charge",
+    "a gym or fitness class booking confirmation with the class name, instructor, and time",
+    "a restaurant reservation confirmation with date, time, party size, and restaurant name",
+    "a hair salon or spa appointment reminder with the stylist or technician name and location",
+    "a grocery delivery confirmed notification with the estimated delivery window and item count",
+    "a utility bill payment confirmation SMS with the account number last four digits and amount",
+    "a mortgage or rent payment received confirmation with the posting date and confirmation number",
+    "a payroll direct deposit notification with the net amount and depositing bank last four digits",
+    "a credit score change notification from a monitoring service showing the new score and change",
+    "a school assignment or grade posted notification to a parent with the student's name and class",
+    "a university enrollment confirmation for an upcoming term with the start date and student ID",
+    "an online course completion certificate notification with the course title",
+    "a library overdue book reminder with the book title, due date, and daily fee amount",
+    "an HOA monthly meeting agenda notification with date, time, and location",
+    "a parking permit renewal reminder with the current expiry date and renewal cost",
+    "a health insurance claim approved notification with the claim number and approved amount",
+    "a 401k or investment account statement now available notification with the current portfolio value",
+    "a home internet service scheduled installation appointment confirmation with the time window",
+    "a package pickup ready notification from a retail store click-and-collect order",
+    "a loyalty points balance update notification showing the current total and next reward threshold",
 ]
+
+# Named services and senders used in safe prompts for realism
+SAFE_SERVICE_NAMES = [
+    "Chase", "Wells Fargo", "Bank of America", "Citibank", "Capital One", "US Bank",
+    "USPS", "FedEx", "UPS", "Amazon", "DHL", "Instacart", "Shipt",
+    "Google", "Apple", "Microsoft", "Spotify", "Netflix", "Hulu", "Disney+",
+    "CVS Pharmacy", "Walgreens", "Rite Aid", "Kaiser Permanente", "Aetna",
+    "Delta Airlines", "United Airlines", "Southwest Airlines", "American Airlines",
+    "Uber", "Lyft", "DoorDash", "Grubhub", "Instacart",
+    "LinkedIn", "Indeed", "Glassdoor", "Zoom", "Slack", "Microsoft Teams",
+    "Verizon", "AT&T", "T-Mobile", "Comcast Xfinity", "Spectrum",
+    "State Farm", "Geico", "Progressive", "Allstate",
+    "Planet Fitness", "Equinox", "Marriott Bonvoy", "Hilton Honors",
+]
+
+# Recipient contexts for safe messages
+SAFE_RECIPIENT_CONTEXTS = [
+    "sent to a customer in the United States",
+    "sent to a customer in Canada",
+    "sent to a small business owner",
+    "sent to a college student managing their first bank account",
+    "sent to a working professional",
+    "sent to a retiree",
+    "sent to a parent managing household expenses",
+    "sent to a frequent traveler with airline and hotel loyalty accounts",
+]
+
+
+def build_safe_prompt(is_hard_negative: bool = False) -> str:
+    """Build a unique safe-class training prompt by sampling from parameter spaces.
+
+    Hard negatives are the most confusable legitimate messages — domain-matched
+    to scam vectors per D-11. Normal samples cover broad transactional categories.
+    """
+    service = random.choice(SAFE_SERVICE_NAMES)
+    recipient_context = random.choice(SAFE_RECIPIENT_CONTEXTS)
+
+    if is_hard_negative:
+        category = random.choice(list(SAFE_HARD_NEG_VARIANTS.keys()))
+        variant = random.choice(SAFE_HARD_NEG_VARIANTS[category])
+        # Match channel to category for realism
+        if category in ("two_factor_auth", "bank_alert", "delivery", "medical_pharmacy"):
+            channel = random.choice(["sms", "app_notification"])
+        elif category in ("legitimate_government", "legitimate_tech"):
+            channel = random.choice(["email", "sms"])
+        else:
+            channel = random.choice(CHANNELS)
+    else:
+        variant = random.choice(SAFE_TRANSACTIONAL_VARIANTS)
+        channel = random.choice(CHANNELS)
+
+    length = random.choice(LENGTHS[channel])
+
+    return (
+        f"Generate a realistic, trustworthy (non-scam) message for a scam detection training dataset. "
+        f"This represents: {variant}. "
+        f"Sender or service: {service} (or a realistic equivalent in the same category). "
+        f"Recipient: {recipient_context}. "
+        f"Channel: {channel}. "
+        f"Length: {length}. "
+        f"Include specific realistic details (order numbers, dollar amounts, tracking numbers, "
+        f"dates, names). The message must be factual and non-urgent with no vague CTAs, no requests "
+        f"for sensitive information, and no suspicious links. "
+        f"Return JSON with fields: text (the message text only), "
+        f"label (='safe'), vector (='safe'), channel (='{channel}')."
+    )
 
 # ---------------------------------------------------------------------------
 # Ollama generation function
@@ -433,7 +827,6 @@ def generate_for_vector(
 
     print(f"\n[START] {vector}: need {remaining} more samples (existing: {existing_count}, target: {target})")
 
-    prompts = SCAM_PROMPTS[vector]
     gemini_target = int(remaining * GEMINI_SHARE)
     ollama_target = remaining - gemini_target
 
@@ -449,11 +842,9 @@ def generate_for_vector(
     ollama_done = 0
     skipped = 0
 
-    # Gemini generation
-    prompt_idx = 0
+    # Gemini generation — parametric prompt, unique per call (eliminates template cycling)
     while gemini_done < gemini_target:
-        prompt = prompts[prompt_idx % len(prompts)]
-        prompt_idx += 1
+        prompt = build_scam_prompt(vector, random.choice(CHANNELS))
         sample = generate_gemini(prompt, client)
         if sample and validate_sample(sample) and not is_contaminated(sample.get("text", ""), holdout_texts):
             sample["vector"] = vector
@@ -477,11 +868,9 @@ def generate_for_vector(
                 f"Gemini: {gemini_done}, Ollama: {ollama_done}, Skipped: {skipped}"
             )
 
-    # Ollama generation
-    prompt_idx = 0
+    # Ollama generation — parametric prompt, unique per call
     while ollama_done < ollama_target:
-        prompt = prompts[prompt_idx % len(prompts)]
-        prompt_idx += 1
+        prompt = build_scam_prompt(vector, random.choice(CHANNELS))
         sample = generate_ollama(prompt)
         if sample and validate_sample(sample) and not is_contaminated(sample.get("text", ""), holdout_texts):
             sample["vector"] = vector
@@ -539,16 +928,9 @@ def generate_safe_samples(
     normal_done = 0
     skipped = 0
 
-    # Hard negatives — cycle through all types per D-11
-    all_hard_neg_prompts = []
-    for prompts in SAFE_HARD_NEGATIVE_PROMPTS.values():
-        all_hard_neg_prompts.extend(prompts)
-    random.shuffle(all_hard_neg_prompts)
-
-    prompt_idx = 0
+    # Hard negatives — parametric prompt, unique per call (D-11 domain-matched categories)
     while hard_neg_done < hard_negative_target:
-        prompt = all_hard_neg_prompts[prompt_idx % len(all_hard_neg_prompts)]
-        prompt_idx += 1
+        prompt = build_safe_prompt(is_hard_negative=True)
 
         # Alternate between Gemini and Ollama for hard negatives
         if hard_neg_done % 4 == 0:
@@ -587,12 +969,9 @@ def generate_safe_samples(
                 f"Gemini: {gemini_done}, Ollama: {ollama_done}, HardNeg: {hard_neg_done}, Skipped: {skipped}"
             )
 
-    # Normal transactional samples
-    random.shuffle(SAFE_NORMAL_PROMPTS)
-    prompt_idx = 0
+    # Normal transactional samples — parametric prompt, unique per call
     while normal_done < normal_target:
-        prompt = SAFE_NORMAL_PROMPTS[prompt_idx % len(SAFE_NORMAL_PROMPTS)]
-        prompt_idx += 1
+        prompt = build_safe_prompt(is_hard_negative=False)
 
         if normal_done % 4 == 0:
             sample = generate_ollama(prompt)
