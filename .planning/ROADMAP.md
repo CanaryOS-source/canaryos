@@ -32,7 +32,12 @@
   4. 100-sample human review is completed and no obvious mode collapse or topical over-specificity is found (e.g., all crypto scam examples do not share identical surface vocabulary)
   5. Train/val/test split (80/10/10) is stratified by vector and saved to `research/data/synthetic_scam_v1.jsonl` and `research/data/test_split.jsonl`
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/FEATURES.md` (scam vector taxonomy, hard negative rationale, dataset sources), `.planning/research/PITFALLS.md` (Pitfalls 1.1–1.4: evaluation contamination, mode collapse, prompt leakage, safety filtering), `.planning/research/STACK.md` (Gemini structured output generation pattern via google-genai SDK)
 
@@ -50,7 +55,12 @@
   4. DistilBERT (66M) is not evaluated — explicitly excluded for exceeding the 50MB INT8 budget
   5. Student architecture is selected and documented with rationale; binary baseline F1 on real-world holdout is recorded as the floor for Phase 4
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/STACK.md` (benchmark table, optimum 1.27.0 pinning, TFLite conversion path), `.planning/research/ARCHITECTURE.md` (input format per architecture, token_type_ids variance), `.planning/research/PITFALLS.md` (Pitfalls 2.4 tokenizer mismatch, 3.4 SELECT_TF_OPS, 4.4 vocab mismatch)
 
@@ -70,7 +80,12 @@
   4. Teacher soft labels are calibrated via temperature scaling on a held-out calibration set; Expected Calibration Error (ECE) measured before and after calibration
   5. Teacher is NOT exported to TFLite or deployed to the app — its role ends at producing soft labels for distillation
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/FEATURES.md` (Step 3: DeBERTa-v3-large rationale, F1 > 0.95 target), `.planning/research/SUMMARY.md` (teacher fine-tune phase note, GPU requirement flag), `.planning/research/PITFALLS.md` (Pitfall 2.1: teacher inherits generalization problem, Pitfall 2.2: over-confident teacher soft labels), `.planning/research/STACK.md` (DeBERTa-v3 PyTorch-only note — dual framework implication)
 
@@ -88,7 +103,12 @@
   4. Distilled student achieves at least 3 F1 points improvement over the direct fine-tune baseline from Phase 2, measured on the real-world holdout
   5. Distilled student checkpoint saved to `research/models/student_finetuned/` — this checkpoint is the input to Phase 6 QAT
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/SUMMARY.md` (intermediate layer distillation rationale, 3–5 F1 gain estimate, layer mapping gap), `.planning/research/FEATURES.md` (Step 4: distillation loss formula, temperature guidance), `.planning/research/PITFALLS.md` (Pitfall 2.1: teacher gate, Pitfall 2.2: temperature calibration, Pitfall 2.3: architecture mismatch for intermediate layers)
 
@@ -106,7 +126,12 @@
   4. Intent head evaluated on real-world holdout: precision and recall reported per label; no label has recall of 0.0 (indicating the head learned to never fire)
   5. Binary scam/safe F1 on real-world holdout does not degrade by more than 1.5% after adding the intent head (shared encoder must not catastrophically forget the binary task)
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/FEATURES.md` (Step 5: single encoder + 8 sigmoid heads, threshold tuning requirement), `.planning/research/SUMMARY.md` (multi-label pitfall: threshold tuning non-trivial given class imbalance)
 
@@ -124,7 +149,12 @@
   4. Model file size is <= 10MB (target) and strictly <= 20MB (hard reject); old `mobilebert_scam_intent.tflite` is deleted from `canaryapp/assets/models/` before the new file is copied
   5. Startup shape assertion exists in `TextClassifierService.ts` that throws a descriptive error if `model.inputs[0].shape[1] !== EXPECTED_SEQUENCE_LENGTH`; debug panel in `index.tsx` is gated behind `__DEV__` before deployment
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/PITFALLS.md` (Pitfall 3.1: TFLite silent float32 bug — primary; Pitfall 3.2: BERT softmax/LayerNorm quantization instability; Pitfall 3.3: QAT epochs; Pitfall 3.4: SELECT_TF_OPS; Pitfall 4.1: shape mismatch; Pitfall 4.2: output tensor index; Pitfall 4.3: stale Metro cache; Pitfall 4.6: bundle size), `.planning/research/STACK.md` (TFMOT QAT code pattern, TF 2.15 pinning rationale, optimum 1.27.0 export path), `.planning/research/ARCHITECTURE.md` (deployment step-by-step, token_type_ids 3-input guard)
 
@@ -136,7 +166,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 0/0 | Not started | - |
+| 1. Data Foundation | 0/3 | Planned | - |
 | 2. Architecture Benchmark | 0/0 | Not started | - |
 | 3. Teacher Fine-Tuning | 0/0 | Not started | - |
 | 4. Knowledge Distillation | 0/0 | Not started | - |
