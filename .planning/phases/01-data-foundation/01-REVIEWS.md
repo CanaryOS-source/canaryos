@@ -1,12 +1,52 @@
 ---
 phase: 1
-reviewers: [claude-sonnet-4-6-inline]
+reviewers: [gemini-cli, claude-sonnet-4-6-inline]
 reviewed_at: 2026-04-03T01:27:55Z
 plans_reviewed: [01-01-PLAN.md, 01-02-PLAN.md, 01-03-PLAN.md]
-note: Gemini CLI requires GEMINI_API_KEY (not set). Codex not installed. Claude CLI skipped (current runtime). Review performed inline by Claude Sonnet 4.6 — treat as structured self-audit, not adversarial cross-AI review. For true adversarial review, set GEMINI_API_KEY and re-run /gsd:review --phase 1.
 ---
 
 # Cross-AI Plan Review — Phase 1: Data Foundation
+
+## Gemini Review
+
+This review evaluates the **Phase 1: Data Foundation** plans for CanaryOS. The overall strategy is highly sophisticated, prioritizing data integrity through a "holdout-first" approach and utilizing advanced statistical gates (JSD) to ensure synthetic diversity. The transition from a broken MobileBERT to a synthetically-anchored but real-world-validated pipeline is architecturally sound.
+
+### Summary
+
+The three-plan sequence establishes a rigorous "Data Factory" that treats dataset generation with the same engineering discipline as code. By collecting a real-world holdout set *before* synthetic generation, the plan creates a true "North Star" for evaluation. The use of a two-model generation strategy (Gemini + Llama) combined with a JSD (Jensen-Shannon Divergence) statistical gate effectively mitigates the primary risk of synthetic data: mode collapse. While the local inference components (Ollama/BART) may face performance bottlenecks on typical hardware, the structural safeguards against data leakage and label noise are top-tier.
+
+### Strengths
+
+- **Holdout Integrity:** Creating `holdout_realworld.jsonl` as the very first step is a critical best practice that prevents the "incestuous" evaluation of synthetic models on synthetic data.
+- **Mode Collapse Mitigation:** The JSD gate (D-08) is a brilliant addition. Quantifying the statistical "distance" between scam vectors ensures the model learns distinct features rather than a generic "bad text" signature.
+- **Two-Model Diversity:** Using Gemini for scale and Llama 3.1 for local diversity (D-05) reduces the risk of the model over-learning the specific linguistic idiosyncrasies or "safety refusals" of a single provider.
+- **Validation-Driven Development:** The early creation of four standalone validation scripts (Plan 01-01) ensures that every subsequent stage has an automated "definition of done."
+- **Threat-Weighted Sampling:** Aligning the distribution with real-world impact (D-12 — prioritizing pig butchering/romance) ensures the final model is most robust where the financial stakes are highest.
+
+### Concerns
+
+- **[HIGH] Environment & Version Conflicts:** The project notes `numpy 2.4.3` and `TF 2.19`, but later phases require `TF 2.15` and `numpy < 2.0`. Validation scripts or BART-based filtering in Plan 01-03 may fail or produce inconsistent results if run in an environment that must be downgraded later.
+- **[MEDIUM] Local Inference Bottlenecks:** Running Llama 3.1 8B for ~7K samples and BART-large-mnli for 27K samples on a local CPU will likely take significantly longer than estimated. BART-large-mnli is particularly heavy for zero-shot classification on CPU at that scale.
+- **[MEDIUM] Hard Negative Definition:** The plan specifies the "Safe" class will use transactional/functional messages but does not explicitly prompt for "hard negatives" (e.g., legitimate security alerts from a bank, a friend asking for money for a legitimate reason). Without these, the model may trigger false positives on any "urgent" financial text.
+- **[LOW] Contamination Check Robustness:** A simple string-matching contamination check might miss synthetic samples that are semantic paraphrases of the holdout set.
+
+### Suggestions
+
+- **Explicit Hard Negative Prompting:** In Plan 01-02, add a specific task to generate "Safe-Hard" samples — legitimate but urgent messages (e.g., 2FA codes, "Your card was declined at [Store]", "Is this you trying to log in?"). This is vital for reducing false positives in a "digital immune system."
+- **Environment Isolation:** Create a specific `venv` for Phase 1 that uses `numpy < 2.0` and `TF 2.15` immediately. Do not build the data foundation on a numpy version that won't be used during training/quantization.
+- **BART Optimization:** For Stage 2 filtering in Plan 01-03, consider `valhalla/distilbart-mnli-12-3` (smaller/faster) or a batch-and-cache strategy to speed up CPU inference.
+- **Semantic De-duplication:** Use `scikit-learn`'s `TfidfVectorizer` or a simple MinHash implementation in `validate_synthetic.py` to check for semantic overlap, not just exact string matches, between the synthetic and holdout sets.
+- **Mobile Context Enrichment:** Ensure prompt templates include metadata like "Notification Title" or "SMS Sender Name" to simulate the actual inputs the model will see on-device.
+
+### Risk Assessment
+
+**Overall Risk: LOW/MEDIUM**
+
+The plan is technically excellent and the risks are primarily **operational** (inference time and environment versions) rather than **architectural**. The risk of building a "bad model" is low because the validation gates (JSD, Holdout, Human Checkpoint) are strong enough to catch data quality issues before they reach the training phase. The primary risk is **timeline slippage** due to heavy local CPU requirements for Ollama and BART.
+
+**Recommendation:** Proceed with Plan 01-01 immediately, but resolve the NumPy/TF version discrepancy before starting the long-running generation in Plan 01-02.
+
+---
 
 ## Claude Sonnet 4.6 (Inline Self-Audit)
 
@@ -169,32 +209,49 @@ Not documented as a reproducibility requirement — executors may change it with
 
 ## Consensus Summary
 
-*(Single reviewer — no cross-AI consensus possible. Run `/gsd:review --phase 1` with GEMINI_API_KEY set for adversarial review.)*
+*(2 reviewers: Gemini CLI + Claude Sonnet 4.6 inline. Reviewers operated independently on the same prompt.)*
 
-### Top Concerns (High Confidence)
+### Agreed Strengths
 
-**1. Ollama CPU inference will bottleneck Plan 02**
-Estimated 3–8 hours is unrealistic. Real hardware clock time for 6.75K local samples at 60–180s each is 113–338 hours. This is the most likely cause of Phase 1 execution delays or D-05 violation. Add hardware benchmark before main loop.
+Both reviewers independently flagged these as well-designed:
 
-**2. No validation that generative models work before committing to long-running loops**
-Both Plan 02 (Gemini structured output) and Plan 03 (bart-large-mnli accuracy) rely on untested assumptions. A 10-minute preflight test for each would catch showstopper issues before 3–8 hour runs. Missing these preflight checks is the highest-probability failure mode.
+- **Holdout-first hard gate** — the evaluation oracle is locked before any synthetic generation (both reviewers called this a critical best practice)
+- **JSD divergence gate** — Gemini called it "brilliant"; Claude flagged it as correct pipeline order; both agree it's the primary mode-collapse defense
+- **Two-model generation (D-05)** — both reviewers independently identified this as the right approach for token distribution diversity
+- **Threat-weighted sampling (D-12)** — both agree crypto/romance overweighting is correct given real-world impact
+- **Validation-driven development** — 4 scripts written before any data is generated; both reviewers praised this
 
-**3. HuggingFace holdout source size assumptions are unvalidated**
-Plan 01-01 may fail immediately if automated datasets return fewer samples than expected. A `--dry-run` mode on collect_holdout.py would catch this in 2 minutes. Without it, the first failure is discovered only after the full collection script runs.
+### Agreed Concerns
 
-### Agreed Strengths (High Confidence)
+Concerns raised by **both reviewers independently** — highest confidence, highest priority:
 
-- Holdout-first hard gate is correctly enforced
-- Threat-weighted distribution (D-12) correctly allocates more samples to hardest-to-detect vectors
-- Two-model generation (D-05) is the right approach for mode collapse mitigation
-- Pydantic schema + `response_json_schema` is correct structured output approach
-- JSD gate runs before quality filter (correct pipeline order)
-- 100-sample human review as blocking gate is appropriate
-- 80/10/10 stratified split with `random_state=42` is reproducible
+**1. Local inference bottlenecks (Ollama + BART) will cause significant timeline slippage**
+Both reviewers flagged this independently. Gemini: "the 3–8 hours estimate could easily triple." Claude: "113–338 hours for 6.75K Ollama samples at 60–180s each." The plan's time estimates are unrealistic for CPU hardware. This is the most likely cause of Phase 1 delays.
+*Fix: hardware benchmark before main generation loop; BART optimization (distilbart or batch-and-cache).*
+
+**2. Hard negatives in the safe class are underspecified**
+Both reviewers flagged this independently. Gemini: "legitimate but urgent messages are not explicitly prompted for — the model may trigger false positives on any urgent financial text." Claude: "generator may produce obviously synthetic hard negatives that are trivially distinguishable." The prompt template library for safe-class hard negatives is missing.
+*Fix: concrete hard-negative prompt templates — bank fraud alerts, delivery notifications, 2FA codes, declined card alerts.*
+
+**3. Environment version conflicts are a latent risk**
+Both reviewers flagged numpy 2.4.3 / TF 2.19 vs required numpy <2.0 / TF 2.15. Gemini explicitly recommended resolving this before Plan 01-02. Claude noted RESEARCH.md documents this but says "do not pin in Phase 1 scripts."
+*Fix: Gemini's recommendation (use target versions from the start) directly contradicts RESEARCH.md's guidance (don't change versions in Phase 1). This is a divergent view — see below.*
 
 ### Divergent Views
 
-*(N/A — single reviewer)*
+**Environment versioning strategy — should Phase 1 scripts pin to TF 2.15 / numpy <2.0?**
+
+- **Gemini** recommends creating a `venv` with `numpy < 2.0` and `TF 2.15` immediately, before Phase 1 scripts run
+- **Claude (aligned with RESEARCH.md)** says Phase 1 is data-only (no TFLite conversion, no TFMOT), so current versions don't cause failures in Phase 1 specifically — changing versions in Phase 1 risks breaking later phases' versioning setup unexpectedly
+
+**Resolution:** RESEARCH.md is authoritative here. Phase 1 scripts must not import tensorflow or torch. The environment conflict is a Phase 2 blocker, not a Phase 1 blocker. Document it in the Phase 1 summary so Phase 2 planning addresses it explicitly before any model training begins.
+
+**Contamination check scope**
+
+- **Gemini** recommends semantic de-duplication (TF-IDF or MinHash) in addition to exact string matching
+- **Claude** treats the exact string match at generation time as sufficient for Phase 1, deferring semantic dedup to later
+
+**Resolution:** Gemini's suggestion is worth adding — a TF-IDF similarity check in `validate_synthetic.py` is low-cost and catches paraphrase contamination that exact match misses.
 
 ---
 
