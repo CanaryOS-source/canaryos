@@ -32,11 +32,11 @@
   4. 100-sample human review is completed and no obvious mode collapse or topical over-specificity is found (e.g., all crypto scam examples do not share identical surface vocabulary)
   5. Train/val/test split (80/10/10) is stratified by vector and saved to `research/data/synthetic_scam_v1.jsonl` and `research/data/test_split.jsonl`
 
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
-- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [x] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
 - [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/FEATURES.md` (scam vector taxonomy, hard negative rationale, dataset sources), `.planning/research/PITFALLS.md` (Pitfalls 1.1–1.4: evaluation contamination, mode collapse, prompt leakage, safety filtering), `.planning/research/STACK.md` (Gemini structured output generation pattern via google-genai SDK)
@@ -58,7 +58,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
 - [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
 - [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
@@ -166,7 +166,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 0/3 | Planned | - |
+| 1. Data Foundation | 2/3 | In Progress|  |
 | 2. Architecture Benchmark | 0/0 | Not started | - |
 | 3. Teacher Fine-Tuning | 0/0 | Not started | - |
 | 4. Knowledge Distillation | 0/0 | Not started | - |

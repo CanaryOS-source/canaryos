@@ -18,7 +18,7 @@ progress:
 
 Phase: 01 (data-foundation) — EXECUTING
 Plan: 2 of 3
-Status: Ready to execute
+Status: Blocked — awaiting user action (GEMINI_API_KEY + ollama pull llama3.1:8b)
 Last activity: 2026-04-03
 
 ## Milestone
@@ -86,7 +86,21 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - 93 curated manual samples (FTC/r-scams patterns) cover all 8 scam vectors and satisfy D-01 community source family requirement
 - Holdout collected: 202 samples (108 scam, 94 safe), AUTOMATED + COMMUNITY source families
 
+### Plan 01-02 Decisions
+
+- Used `llama3.1:8b` as Ollama model per D-06 (Claude's discretion — better documented for structured generation than Mistral 7B)
+- romance_grooming and government_impersonation routed 50% to Ollama per Pitfall 1.4 (safety filter bypass for sensitive vectors)
+- Hard negative safe class is 25% of safe target with 4 domain types per D-09/D-11
+- Script is resumable: loads existing synthetic_raw.jsonl and fills remaining per-vector gaps
+
+### Active Blockers
+
+- **01-02 Task 2:** `GEMINI_API_KEY` not set in environment. Get from https://aistudio.google.com/apikey then `export GEMINI_API_KEY="your-key"`
+- **01-02 Task 2:** `llama3.1:8b` not in Ollama (only `kimi-k2.5:cloud` present). Run: `ollama pull llama3.1:8b`
+
 ### Execution Log
 
 - 2026-04-03: Plan 01-01 completed — Wave 0 validation scripts and real-world holdout (commits db7c9f3, cb054f7)
-- Last session: 2026-04-03T02:21:23Z — Stopped at: Completed 01-01-PLAN.md
+- 2026-04-03: Plan 01-02 Task 1 completed — generate_dataset.py script (commit 6155546)
+- 2026-04-03: Plan 01-02 Task 2 blocked — auth gate (GEMINI_API_KEY missing, llama3.1:8b not pulled)
+- Last session: 2026-04-03 — Stopped at: 01-02 Task 2 auth gate
