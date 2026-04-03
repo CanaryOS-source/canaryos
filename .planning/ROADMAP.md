@@ -35,7 +35,7 @@
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
 - [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
 - [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 

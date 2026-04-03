@@ -1,11 +1,25 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+last_updated: "2026-04-03T02:22:26.434Z"
+last_activity: 2026-04-03
+progress:
+  total_phases: 6
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 1
+---
+
 # Project State
 
 ## Current Position
 
-Phase: Phase 1 — Data Foundation (not yet started)
-Plan: —
-Status: Roadmap created; ready to plan Phase 1
-Last activity: 2026-04-01 — Milestone v1.0 roadmap and requirements written
+Phase: 01 (data-foundation) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-04-03
 
 ## Milestone
 
@@ -16,7 +30,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 
 | Phase | Status |
 |-------|--------|
-| 1. Data Foundation | Not started |
+| 1. Data Foundation | In progress (Plan 1/3 complete) |
 | 2. Architecture Benchmark | Not started |
 | 3. Teacher Fine-Tuning | Not started |
 | 4. Knowledge Distillation | Not started |
@@ -26,6 +40,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 ## Accumulated Context
 
 ### Codebase State
+
 - Text model (`mobilebert_scam_intent.tflite`, 26.7MB) is broken — input format issues and poor generalization to modern scam patterns
 - Current training data limited to SMS spam corpus (UCI, ~5K samples); fails on crypto/romance/tech support/gov impersonation vectors
 - On-device pipeline scaffolding is in place (OCR → text model → fusion) but text classifier does not produce reliable output
@@ -37,6 +52,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - `services/ScanService.ts` is dead code (not imported anywhere)
 
 ### Key Architectural Decisions (Locked)
+
 - Student model: TinyBERT-4 (`huawei-noah/TinyBERT_General_4L_312D`) — 14.5M params, ~14MB INT8, 62ms Pixel 4 inference
 - Teacher model: microsoft/deberta-v3-large (435M params) — better GLUE than RoBERTa, disentangled attention helps short texts
 - Tokenizer: BERT WordPiece, 30,522 vocab — same as existing `vocab.txt`; no change to `TextTokenizer.ts`
@@ -46,6 +62,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - numpy: must stay < 2.0 (2.0 breaks TF 2.15 and onnxruntime)
 
 ### Hard Gates (Do Not Skip)
+
 - Real-world holdout must be built BEFORE any synthetic generation
 - Teacher F1 > 0.80 on real-world holdout before distillation begins
 - Binary classifier F1 > 0.85 on real-world holdout before intent head added
@@ -53,10 +70,23 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - Post-QAT: `input_details[0]['dtype'] == numpy.int32` assertion must pass before deployment
 
 ### Compute Note
+
 - Phase 3 (teacher fine-tuning) requires >16GB GPU VRAM — confirm Colab A100 or Lambda Labs availability before starting Phase 3
 
 ### Research Environment
+
 - Python + TF + HuggingFace in `.venv` at repo root
 - Notebooks in `research/notebooks/`
 - Scripts in `research/scripts/`
 - Data and model outputs gitignored in `research/data/` and `research/models/`
+
+### Plan 01-01 Decisions
+
+- Used `ucirvine/sms_spam` instead of `ealvaradob/phishing-dataset` and `redasers/difraud` — both use legacy HuggingFace loading scripts that are no longer supported by the datasets library
+- 93 curated manual samples (FTC/r-scams patterns) cover all 8 scam vectors and satisfy D-01 community source family requirement
+- Holdout collected: 202 samples (108 scam, 94 safe), AUTOMATED + COMMUNITY source families
+
+### Execution Log
+
+- 2026-04-03: Plan 01-01 completed — Wave 0 validation scripts and real-world holdout (commits db7c9f3, cb054f7)
+- Last session: 2026-04-03T02:21:23Z — Stopped at: Completed 01-01-PLAN.md

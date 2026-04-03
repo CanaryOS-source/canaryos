@@ -144,7 +144,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEXT-01 | Phase 1: Data Foundation | Pending |
+| TEXT-01 | Phase 1: Data Foundation | Complete |
 | TEXT-02 | Phase 2: Architecture Benchmark | Pending |
 | TEXT-04 (teacher) | Phase 3: Teacher Fine-Tuning | Pending |
 | TEXT-04 (distillation) | Phase 4: Knowledge Distillation | Pending |
