@@ -62,6 +62,13 @@ research/models/*.tflite
 research/models/*.onnx
 research/models/saved_model_scam_detector/
 research/models/output_models/
+research/models/benchmark_tmp/
+research/models/benchmark_comparison.png
+research/models/benchmark_tflite_convert.log
+research/models/tflite_results.json
+
+# onnx2tf conversion artifacts
+*.data
 
 # Model formats (only production models in canaryapp/assets/models/ are tracked)
 *.onnx
