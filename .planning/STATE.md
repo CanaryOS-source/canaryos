@@ -123,4 +123,5 @@ None — all Phase 1 plans complete, human review approved.
 - Decision: TF direct path for TFLite (not ONNX->onnx2tf) -- onnx2tf int64/int32 type mismatch on all BERT models
 - Decision: MobileBERT selected as winner (Holdout F1=0.7719); binary baseline F1=0.7719 is Phase 4 floor
 - Decision: All 3 models pass standard LiteRT without SELECT_TF_OPS -- no disqualifications
-- Awaiting: Task 3 checkpoint -- user review of architecture selection rationale
+- 2026-04-04: Task 3 checkpoint APPROVED -- user chose MobileBERT, prioritizing model capability (F1=0.7719) over size concerns (~23MB INT8 est. vs 20MB hard reject). Size to be addressed in Phase 6 QAT.
+- Decision: MobileBERT INT8 size concern acknowledged but deprioritized by user in favor of classification capability
