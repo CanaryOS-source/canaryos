@@ -82,7 +82,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Create teacher fine-tuning notebook (DualHead DeBERTa-v3-large, training pipeline, evaluation, ECE calibration, soft label pre-computation)
+- [x] 03-01-PLAN.md — Create teacher fine-tuning notebook (DualHead DeBERTa-v3-large, training pipeline, evaluation, ECE calibration, soft label pre-computation)
 - [ ] 03-02-PLAN.md — Verify training results meet Phase 3 gate (user runs notebook in Colab, confirms F1 > 0.80 holdout)
 
 **Research refs:** `.planning/research/FEATURES.md` (Step 3: DeBERTa-v3-large rationale, F1 > 0.95 target), `.planning/research/SUMMARY.md` (teacher fine-tune phase note, GPU requirement flag), `.planning/research/PITFALLS.md` (Pitfall 2.1: teacher inherits generalization problem, Pitfall 2.2: over-confident teacher soft labels), `.planning/research/STACK.md` (DeBERTa-v3 PyTorch-only note — dual framework implication)
