@@ -2,12 +2,14 @@
 Validate train/val/test split integrity.
 
 Checks against:
-  - research/data/synthetic_scam_v1.jsonl  (train + val portion)
+  - research/data/synthetic_scam_v1.jsonl  (train + val portion combined)
   - research/data/test_split.jsonl          (test portion)
 
 Verifies:
   - Both files exist
-  - ~80/10/10 train-val/test split ratios (tolerance 78-82% / 8-12%)
+  - ~90/10 file split (synthetic_scam_v1.jsonl has train+val, test_split.jsonl has test)
+  - Within synthetic_scam_v1.jsonl: ~80/10 train/val split (of grand total)
+  - Overall ~80/10/10 train/val/test split ratios
   - Zero text overlap between synthetic and test files
   - All 8 scam vectors + safe class appear in both files (stratification)
   - random_state=42 documented for reproducibility
@@ -84,30 +86,56 @@ def main():
         sys.exit(1)
 
     # --- Split ratio check ---
+    # synthetic_scam_v1.jsonl contains BOTH train and val (distinguished by "split" field)
     train_val_ratio = n_train_val / n_total
     test_ratio = n_test / n_total
+
+    # Count train vs val within synthetic_scam_v1.jsonl
+    n_train = sum(1 for s in train_val_samples if s.get("split") == "train")
+    n_val = sum(1 for s in train_val_samples if s.get("split") == "val")
+    train_ratio = n_train / n_total if n_total > 0 else 0
+    val_ratio = n_val / n_total if n_total > 0 else 0
 
     print("=" * 60)
     print("SPLIT VALIDATION")
     print("=" * 60)
     print(f"synthetic_scam_v1.jsonl : {n_train_val:>6} samples ({train_val_ratio:.1%} of total)")
+    print(f"  - train               : {n_train:>6} samples ({train_ratio:.1%} of total)")
+    print(f"  - val                 : {n_val:>6} samples ({val_ratio:.1%} of total)")
     print(f"test_split.jsonl        : {n_test:>6} samples ({test_ratio:.1%} of total)")
     print(f"Total (implied)         : {n_total:>6}")
     print()
 
     failed = False
 
-    if not (0.78 <= train_val_ratio <= 0.82):
+    # File-level check: synthetic_scam_v1.jsonl should be ~90% (train+val combined)
+    if not (0.88 <= train_val_ratio <= 0.92):
         print(
-            f"ERROR: Train+val ratio = {train_val_ratio:.1%}, need 78-82% "
-            f"(expected ~80% = ~{int(n_total * 0.8)} samples)"
+            f"ERROR: Train+val file ratio = {train_val_ratio:.1%}, need 88-92% "
+            f"(expected ~90% = ~{int(n_total * 0.9)} samples)"
         )
         failed = True
 
+    # Test should be ~10%
     if not (0.08 <= test_ratio <= 0.12):
         print(
             f"ERROR: Test ratio = {test_ratio:.1%}, need 8-12% "
             f"(expected ~10% = ~{int(n_total * 0.1)} samples)"
+        )
+        failed = True
+
+    # Within-file check: train should be ~80% of grand total, val ~10%
+    if not (0.76 <= train_ratio <= 0.84):
+        print(
+            f"ERROR: Train ratio = {train_ratio:.1%} of total, need 76-84% "
+            f"(expected ~80%)"
+        )
+        failed = True
+
+    if not (0.07 <= val_ratio <= 0.13):
+        print(
+            f"ERROR: Val ratio = {val_ratio:.1%} of total, need 7-13% "
+            f"(expected ~10%)"
         )
         failed = True
 
