@@ -66,6 +66,7 @@ research/models/benchmark_tmp/
 research/models/benchmark_comparison.png
 research/models/benchmark_tflite_convert.log
 research/models/tflite_results.json
+research/models/holdout_confusion_matrices.png
 
 # onnx2tf conversion artifacts
 *.data
