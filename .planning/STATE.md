@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-04T17:16:43.632Z"
-last_activity: 2026-04-04 -- Phase 02 execution started
+last_updated: "2026-04-04T17:35:35Z"
+last_activity: 2026-04-04 -- Plan 02-02 Tasks 1-2 complete, awaiting Task 3 checkpoint
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -17,9 +17,9 @@ progress:
 ## Current Position
 
 Phase: 02 (architecture-benchmark) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 02
-Last activity: 2026-04-04 -- Phase 02 execution started
+Plan: 2 of 2 (checkpoint pending)
+Status: Plan 02-02 Tasks 1-2 complete, awaiting Task 3 human-verify checkpoint
+Last activity: 2026-04-04 -- Plan 02-02 TFLite conversion + architecture selection complete
 
 ## Milestone
 
@@ -31,7 +31,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 | Phase | Status |
 |-------|--------|
 | 1. Data Foundation | In progress (Plan 3/3 at checkpoint) |
-| 2. Architecture Benchmark | Not started |
+| 2. Architecture Benchmark | Plan 02-02 checkpoint pending |
 | 3. Teacher Fine-Tuning | Not started |
 | 4. Knowledge Distillation | Not started |
 | 5. Multi-Label Intent Head | Not started |
@@ -119,3 +119,8 @@ None — all Phase 1 plans complete, human review approved.
 - Last session: 2026-04-04 -- Phase 1 complete, proceeding to verification
 - 2026-04-04: Plan 02-01 -- Benchmark notebook created (11 code cells), committed. User runs training manually in Jupyter.
 - Decision: Long-running ML training handled via user handoff, not Claude looping.
+- 2026-04-04: Plan 02-02 Tasks 1-2 -- TFLite conversion + architecture selection (commits 33ef437, 31b7bbe)
+- Decision: TF direct path for TFLite (not ONNX->onnx2tf) -- onnx2tf int64/int32 type mismatch on all BERT models
+- Decision: MobileBERT selected as winner (Holdout F1=0.7719); binary baseline F1=0.7719 is Phase 4 floor
+- Decision: All 3 models pass standard LiteRT without SELECT_TF_OPS
+- Awaiting: Task 3 checkpoint -- user review of architecture selection rationale

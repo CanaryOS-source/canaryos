@@ -10,7 +10,7 @@
 ## Phases
 
 - [ ] **Phase 1: Data Foundation** — Build real-world holdout set and generate synthetic training dataset
-- [ ] **Phase 2: Architecture Benchmark** — Validate student architecture selection with binary baseline
+- [x] **Phase 2: Architecture Benchmark** — Validate student architecture selection with binary baseline (completed 2026-04-04)
 - [ ] **Phase 3: Teacher Fine-Tuning** — Fine-tune DeBERTa-v3-large server-side to F1 > 0.95 gate
 - [ ] **Phase 4: Knowledge Distillation** — Distill teacher accuracy into TinyBERT-4 student via intermediate layer transfer
 - [ ] **Phase 5: Multi-Label Intent Head** — Add 8 sigmoid heads to the stable binary classifier
@@ -55,11 +55,11 @@ Plans:
   4. DistilBERT (66M) is not evaluated — explicitly excluded for exceeding the 50MB INT8 budget
   5. Student architecture is selected and documented with rationale; binary baseline F1 on real-world holdout is recorded as the floor for Phase 4
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 02-01-PLAN.md — Environment setup + train three architectures on identical data splits
-- [ ] 02-02-PLAN.md — TFLite conversion, latency measurement, results aggregation, winner selection
+- [x] 02-01-PLAN.md — Environment setup + train three architectures on identical data splits
+- [x] 02-02-PLAN.md — TFLite conversion, latency measurement, results aggregation, winner selection
 
 **Research refs:** `.planning/research/STACK.md` (benchmark table, optimum 1.27.0 pinning, TFLite conversion path), `.planning/research/ARCHITECTURE.md` (input format per architecture, token_type_ids variance), `.planning/research/PITFALLS.md` (Pitfalls 2.4 tokenizer mismatch, 3.4 SELECT_TF_OPS, 4.4 vocab mismatch)
 
@@ -166,7 +166,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 3/3 | Complete |  |
-| 2. Architecture Benchmark | 0/2 | Planned | - |
+| 2. Architecture Benchmark | 2/2 | Complete   | 2026-04-04 |
 | 3. Teacher Fine-Tuning | 0/0 | Not started | - |
 | 4. Knowledge Distillation | 0/0 | Not started | - |
 | 5. Multi-Label Intent Head | 0/0 | Not started | - |
