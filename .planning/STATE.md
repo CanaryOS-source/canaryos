@@ -2,24 +2,24 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-04-04T21:28:08.437Z"
-last_activity: 2026-04-04
+status: executing
+last_updated: "2026-04-04T21:14:13.268Z"
+last_activity: 2026-04-04 -- Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 3
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-04-04
+Phase: 03 (teacher-fine-tuning) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 03
+Last activity: 2026-04-04 -- Phase 03 execution started
 
 ## Milestone
 
@@ -32,7 +32,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 |-------|--------|
 | 1. Data Foundation | In progress (Plan 3/3 at checkpoint) |
 | 2. Architecture Benchmark | Plan 02-02 checkpoint pending |
-| 3. Teacher Fine-Tuning | Plan 1/2 complete |
+| 3. Teacher Fine-Tuning | Not started |
 | 4. Knowledge Distillation | Not started |
 | 5. Multi-Label Intent Head | Not started |
 | 6. QAT + TFLite Deployment | Not started |
@@ -125,12 +125,3 @@ None — all Phase 1 plans complete, human review approved.
 - Decision: All 3 models pass standard LiteRT without SELECT_TF_OPS -- no disqualifications
 - 2026-04-04: Task 3 checkpoint APPROVED -- user chose MobileBERT, prioritizing model capability (F1=0.7719) over size concerns (~23MB INT8 est. vs 20MB hard reject). Size to be addressed in Phase 6 QAT.
 - Decision: MobileBERT INT8 size concern acknowledged but deprioritized by user in favor of classification capability
-
-### Plan 03-01 Decisions
-
-- DualHeadDeBERTaTeacher wraps DebertaV2Model (not ForSequenceClassification) to support binary + multi-label heads on shared encoder
-- Loss weighting: 0.7 binary + 0.3 intent (binary is hard gate, intent is informational per D-06)
-- Calibration set: 20% of val split (~459 samples), NOT holdout -- holdout preserved for F1 gate integrity
-- Soft labels pre-computed via single forward pass with offline temperature scaling at T={2,3,4,5}
-- DualHeadTrainer overrides both compute_loss and prediction_step for proper dual-head handling
-- 2026-04-04: Plan 03-01 completed -- teacher fine-tuning notebook (15 code cells, 1334 lines) committed (aeb751b, 1ae4f52)
