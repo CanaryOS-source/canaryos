@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-04T17:35:35Z"
-last_activity: 2026-04-04 -- Plan 02-02 Tasks 1-2 complete, awaiting Task 3 checkpoint
+status: verifying
+last_updated: "2026-04-04T17:46:53.636Z"
+last_activity: 2026-04-04
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -18,8 +18,8 @@ progress:
 
 Phase: 02 (architecture-benchmark) — EXECUTING
 Plan: 2 of 2 (checkpoint pending)
-Status: Plan 02-02 Tasks 1-2 complete, awaiting Task 3 human-verify checkpoint
-Last activity: 2026-04-04 -- Plan 02-02 TFLite conversion + architecture selection complete
+Status: Phase complete — ready for verification
+Last activity: 2026-04-04
 
 ## Milestone
 
@@ -53,13 +53,13 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 
 ### Key Architectural Decisions (Locked)
 
-- Student model: TinyBERT-4 (`huawei-noah/TinyBERT_General_4L_312D`) — 14.5M params, ~14MB INT8, 62ms Pixel 4 inference
+- Student model: MobileBERT (`google/mobilebert-uncased`) -- 24.6M params, ~23MB INT8 est., 65ms desktop TFLite. UPDATED from TinyBERT-4 per Phase 2 benchmark results (MobileBERT F1=0.7719 vs TinyBERT F1=0.7059)
 - Teacher model: microsoft/deberta-v3-large (435M params) — better GLUE than RoBERTa, disentangled attention helps short texts
 - Tokenizer: BERT WordPiece, 30,522 vocab — same as existing `vocab.txt`; no change to `TextTokenizer.ts`
 - Distillation: Intermediate layer transfer (attention matrix + hidden states) + soft labels — NOT soft-labels-only
 - Quantization: QAT via TFMOT (TF 2.15/2.16) — PTQ explicitly prohibited for BERT family
-- Export: optimum==1.27.0 for TFLite export (optimum >= 2.0 removed TFLite support)
-- numpy: must stay < 2.0 (2.0 breaks TF 2.15 and onnxruntime)
+- Export: TF SavedModel path for TFLite (PyTorch->TFAutoModel(from_pt=True)->TFLiteConverter). UPDATED: optimum 1.27.0 approach abandoned (onnx2tf Slice bug; optimum 2.1.0 has no TFLite export)
+- numpy: 2.4.3 works with TF 2.21 and onnxruntime 1.24 (old <2.0 constraint no longer applies)
 
 ### Hard Gates (Do Not Skip)
 
@@ -119,8 +119,8 @@ None — all Phase 1 plans complete, human review approved.
 - Last session: 2026-04-04 -- Phase 1 complete, proceeding to verification
 - 2026-04-04: Plan 02-01 -- Benchmark notebook created (11 code cells), committed. User runs training manually in Jupyter.
 - Decision: Long-running ML training handled via user handoff, not Claude looping.
-- 2026-04-04: Plan 02-02 Tasks 1-2 -- TFLite conversion + architecture selection (commits 33ef437, 31b7bbe)
+- 2026-04-04: Plan 02-02 Tasks 1-2 -- TFLite conversion + architecture selection (commits 7cf0832, 9e7ba2b)
 - Decision: TF direct path for TFLite (not ONNX->onnx2tf) -- onnx2tf int64/int32 type mismatch on all BERT models
 - Decision: MobileBERT selected as winner (Holdout F1=0.7719); binary baseline F1=0.7719 is Phase 4 floor
-- Decision: All 3 models pass standard LiteRT without SELECT_TF_OPS
+- Decision: All 3 models pass standard LiteRT without SELECT_TF_OPS -- no disqualifications
 - Awaiting: Task 3 checkpoint -- user review of architecture selection rationale

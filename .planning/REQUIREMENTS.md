@@ -145,7 +145,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TEXT-01 | Phase 1: Data Foundation | Complete |
-| TEXT-02 | Phase 2: Architecture Benchmark | Pending |
+| TEXT-02 | Phase 2: Architecture Benchmark | Complete |
 | TEXT-04 (teacher) | Phase 3: Teacher Fine-Tuning | Pending |
 | TEXT-04 (distillation) | Phase 4: Knowledge Distillation | Pending |
 | TEXT-03 | Phase 5: Multi-Label Intent Head | Pending |
