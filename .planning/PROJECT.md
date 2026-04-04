@@ -24,7 +24,7 @@ On-device scam detection that works across all apps, in real time, without compr
 <!-- Milestone v1.0: Text Classification Research -->
 
 - [x] **TEXT-01**: Synthetic scam/safe dataset generated covering all major scam vectors — *Validated in Phase 1: Data Foundation*
-- [ ] **TEXT-02**: Architecture benchmark completed (MobileBERT vs DistilBERT vs TinyBERT)
+- [x] **TEXT-02**: Architecture benchmark completed (MobileBERT vs DistilBERT vs TinyBERT) — *Validated in Phase 2: Architecture Benchmark*
 - [ ] **TEXT-03**: Intent classifiers trained for specific scam sub-types
 - [ ] **TEXT-04**: Knowledge distillation from large teacher model (RoBERTa/DeBERTa)
 - [ ] **TEXT-05**: Int8 quantization-aware training applied
@@ -75,7 +75,7 @@ Screen State Change → Ingestion → [OCR | Visual CNN] → [NLP Model | Layout
 | Expo managed workflow | Cross-platform, faster iteration | ✓ Good |
 | Firebase as control plane | Auth + family features, not inference | ✓ Good |
 | Synthetic data generation via LLM | Public datasets too narrow (SMS spam only) | ✓ Phase 1 complete — 22,942 samples, 3-model pipeline |
-| MobileBERT as baseline | Reasonable tradeoff, needs benchmarking vs alternatives | — Pending |
+| MobileBERT as student architecture | Highest holdout F1 (0.77) in 3-way benchmark; user prioritized capability over size (~23MB INT8 est.) | ✓ Phase 2 — selected over ELECTRA-small (F1=0.73) and TinyBERT-4 (F1=0.71) |
 | Knowledge distillation from RoBERTa/DeBERTa | Transfer accuracy from large to small model | — Pending |
 
 ## Current Milestone: v1.0 Text Classification Research
@@ -108,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 — Phase 1 Data Foundation complete*
+*Last updated: 2026-04-04 — Phase 2 Architecture Benchmark complete, MobileBERT selected*
