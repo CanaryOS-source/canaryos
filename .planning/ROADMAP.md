@@ -32,7 +32,7 @@
   4. 100-sample human review is completed and no obvious mode collapse or topical over-specificity is found (e.g., all crypto scam examples do not share identical surface vocabulary)
   5. Train/val/test split (80/10/10) is stratified by vector and saved to `research/data/synthetic_scam_v1.jsonl` and `research/data/test_split.jsonl`
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 - [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
@@ -55,12 +55,11 @@ Plans:
   4. DistilBERT (66M) is not evaluated — explicitly excluded for exceeding the 50MB INT8 budget
   5. Student architecture is selected and documented with rationale; binary baseline F1 on real-world holdout is recorded as the floor for Phase 4
 
-**Plans:** 3 plans
+**Plans:** 2 plans
 
 Plans:
-- [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
-- [x] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
-- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
+- [ ] 02-01-PLAN.md — Environment setup + train three architectures on identical data splits
+- [ ] 02-02-PLAN.md — TFLite conversion, latency measurement, results aggregation, winner selection
 
 **Research refs:** `.planning/research/STACK.md` (benchmark table, optimum 1.27.0 pinning, TFLite conversion path), `.planning/research/ARCHITECTURE.md` (input format per architecture, token_type_ids variance), `.planning/research/PITFALLS.md` (Pitfalls 2.4 tokenizer mismatch, 3.4 SELECT_TF_OPS, 4.4 vocab mismatch)
 
@@ -166,8 +165,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 2/3 | In Progress|  |
-| 2. Architecture Benchmark | 0/0 | Not started | - |
+| 1. Data Foundation | 3/3 | Complete |  |
+| 2. Architecture Benchmark | 0/2 | Planned | - |
 | 3. Teacher Fine-Tuning | 0/0 | Not started | - |
 | 4. Knowledge Distillation | 0/0 | Not started | - |
 | 5. Multi-Label Intent Head | 0/0 | Not started | - |
