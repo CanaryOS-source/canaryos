@@ -79,12 +79,11 @@ Plans:
   4. Teacher soft labels are calibrated via temperature scaling on a held-out calibration set; Expected Calibration Error (ECE) measured before and after calibration
   5. Teacher is NOT exported to TFLite or deployed to the app — its role ends at producing soft labels for distillation
 
-**Plans:** 3 plans
+**Plans:** 2 plans
 
 Plans:
-- [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
-- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
-- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
+- [ ] 03-01-PLAN.md — Create teacher fine-tuning notebook (DualHead DeBERTa-v3-large, training pipeline, evaluation, ECE calibration, soft label pre-computation)
+- [ ] 03-02-PLAN.md — Verify training results meet Phase 3 gate (user runs notebook in Colab, confirms F1 > 0.80 holdout)
 
 **Research refs:** `.planning/research/FEATURES.md` (Step 3: DeBERTa-v3-large rationale, F1 > 0.95 target), `.planning/research/SUMMARY.md` (teacher fine-tune phase note, GPU requirement flag), `.planning/research/PITFALLS.md` (Pitfall 2.1: teacher inherits generalization problem, Pitfall 2.2: over-confident teacher soft labels), `.planning/research/STACK.md` (DeBERTa-v3 PyTorch-only note — dual framework implication)
 
@@ -167,7 +166,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 3/3 | Complete |  |
 | 2. Architecture Benchmark | 2/2 | Complete   | 2026-04-04 |
-| 3. Teacher Fine-Tuning | 0/0 | Not started | - |
+| 3. Teacher Fine-Tuning | 0/2 | Planned | - |
 | 4. Knowledge Distillation | 0/0 | Not started | - |
 | 5. Multi-Label Intent Head | 0/0 | Not started | - |
 | 6. QAT + TFLite Deployment | 0/0 | Not started | - |
