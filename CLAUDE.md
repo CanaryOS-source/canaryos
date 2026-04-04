@@ -65,9 +65,16 @@ source ../.venv/bin/activate
 jupyter notebook
 ```
 
+## ML Research Convention
+
+All ML research work (model training, benchmarking, evaluation, distillation, analysis) MUST be implemented as Jupyter notebooks (`.ipynb`) in `research/notebooks/`. Do NOT use plain `.py` files for research tasks. The only exception is small utility/pipeline scripts (data download, format conversion, CI validation) which belong in `research/scripts/`.
+
+**Decision rule:** If the task involves iterating on model behavior, visualizing results, or exploring data — it's a notebook in `research/notebooks/`. If it's a one-shot automation script with no interactive exploration — it's a script in `research/scripts/`.
+
 ## What NOT to Do
 
 - Do not use cloud API (scamAnalyzer.ts / Gemini) as the default analysis path — it exists only as a demo fallback
 - Do not add files to `canaryapp/assets/models/` without removing old versions
 - Do not check large model files (.tflite, .onnx) into git outside of `canaryapp/assets/models/`
 - Do not create new native modules without discussion — the overlay module was removed intentionally
+- Do not create `.py` files for ML research tasks (training, benchmarking, evaluation, distillation) — use `.ipynb` notebooks in `research/notebooks/`

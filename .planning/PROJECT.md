@@ -42,7 +42,7 @@ On-device scam detection that works across all apps, in real time, without compr
 
 **Current state of the text model:** The existing MobileBERT model fine-tuned on SMS spam is broken in production — input format issues and severe overfitting to narrow training data. It fails to generalize to modern scam patterns (crypto, romance, tech support, government impersonation, etc.) that don't textually resemble classic SMS spam.
 
-**ML research approach:** All research happens in `research/` directory (Jupyter notebooks). Validated models are exported to TFLite and copied to `canaryapp/assets/models/`. The research environment uses Python + TensorFlow + Hugging Face, separate from the React Native app.
+**ML research approach:** All ML research work (model training, benchmarking, evaluation, distillation, analysis) MUST use Jupyter notebooks (`.ipynb`) in `research/notebooks/`. Plain `.py` scripts in `research/scripts/` are only for non-research utilities (data download, format conversion, CI validation). Validated models are exported to TFLite and copied to `canaryapp/assets/models/`. The research environment uses Python + TensorFlow + Hugging Face, separate from the React Native app.
 
 **On-device constraints:**
 - Total pipeline latency must be <100ms

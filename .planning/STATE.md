@@ -76,8 +76,8 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 ### Research Environment
 
 - Python + TF + HuggingFace in `.venv` at repo root
-- Notebooks in `research/notebooks/`
-- Scripts in `research/scripts/`
+- **All ML research (training, benchmarking, evaluation, distillation, analysis) MUST be Jupyter notebooks (`.ipynb`) in `research/notebooks/`** — do NOT use `.py` files for research tasks
+- Utility/pipeline scripts only (data download, format conversion, CI validation) go in `research/scripts/`
 - Data and model outputs gitignored in `research/data/` and `research/models/`
 
 ### Plan 01-01 Decisions
