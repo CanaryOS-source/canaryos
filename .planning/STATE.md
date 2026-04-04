@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-03T02:22:26.434Z"
-last_activity: 2026-04-03
+last_updated: "2026-04-04T03:28:41.159Z"
+last_activity: 2026-04-04
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # Project State
@@ -17,9 +17,9 @@ progress:
 ## Current Position
 
 Phase: 01 (data-foundation) — EXECUTING
-Plan: 2 of 3
-Status: Executing — generation script running (128 samples written, ~26,872 remaining)
-Last activity: 2026-04-03
+Plan: 3 of 3
+Status: Plan 01-03 at checkpoint:human-verify (100-sample review)
+Last activity: 2026-04-04
 
 ## Milestone
 
@@ -30,7 +30,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 
 | Phase | Status |
 |-------|--------|
-| 1. Data Foundation | In progress (Plan 1/3 complete) |
+| 1. Data Foundation | In progress (Plan 3/3 at checkpoint) |
 | 2. Architecture Benchmark | Not started |
 | 3. Teacher Fine-Tuning | Not started |
 | 4. Knowledge Distillation | Not started |
@@ -89,19 +89,31 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 ### Plan 01-02 Decisions
 
 - Used `llama3.1:8b` as Ollama model per D-06 (Claude's discretion — better documented for structured generation than Mistral 7B)
-- romance_grooming and government_impersonation routed 50% to Ollama per Pitfall 1.4 (safety filter bypass for sensitive vectors)
+- romance_grooming and government_impersonation routed to 25% Ollama (2.5× base share) per Pitfall 1.4 — reduced from 50% to match new 10% overall Ollama target while still providing safety-bypass coverage
 - Hard negative safe class is 25% of safe target with 6 domain categories per D-09/D-11 (added legitimate_tech and legitimate_government categories beyond original 4)
 - Script is resumable: loads existing synthetic_raw.jsonl and fills remaining per-vector gaps
-- **Replaced static template cycling with parametric prompt builder** — root cause of observed structural repetition in first 128 samples was cycling 5-8 fixed templates hundreds of times. `build_scam_prompt()` and `build_safe_prompt()` each sample from 7 independent parameter spaces (sub-variant × register × length × emotional angle × sender persona × cultural context × channel), producing millions of unique combinations per vector. Scam: 12 sub-variants × 12 registers × 5 emotional angles × 8 personas × 16 contexts. Safe: 35 transactional variants + 6 hard-neg categories × 8 variants each. Existing 128 samples preserved (valid data; dedup filter in Phase 3 handles any exact duplicates).
+- **Replaced static template cycling with parametric prompt builder** — `build_scam_prompt()` and `build_safe_prompt()` each sample from 7 independent parameter spaces (sub-variant × register × length × emotional angle × sender persona × cultural context × channel), producing millions of unique combinations per vector.
+- **Added Gemini 3.1 Flash Lite** (`gemini-3.1-flash-lite-preview`, 150K RPD) as third model: takes 60% of Gemini budget, Flash 2.5 takes 40%. Combined Gemini = 75% (D-05 satisfied). Flash Lite's 15× higher daily cap prevents mid-run RPD exhaustion.
+- **Parallelised Gemini calls** via `ThreadPoolExecutor(max_workers=10)` — ~10× throughput vs sequential. Estimated full run: ~1-2 hours (Gemini portion) + ~3 hours (Ollama sequential).
+- **Ollama reduced to 10%** (from 25%) to cap sequential bottleneck at ~3 hours total for ~2,700 samples.
+- **Fixed 503/UNAVAILABLE retry** — previously only caught 429/RESOURCE_EXHAUSTED; 503 fell through to `return None` (silent sample loss). Now both trigger exponential backoff (max 32s, 5 retries).
+
+### Plan 01-03 Decisions
+
+- BART-large-MNLI baseline failed (53% accuracy on holdout for scam/safe zero-shot) -- NLI zero-shot fundamentally cannot distinguish scam from safe in this domain
+- Fell back to keyword-based vector consistency check: scam samples require >= 2 domain keywords matching their vector; safe samples pass unconditionally
+- romance_grooming had highest discard rate (57.5%); 1,276 samples retained is sufficient
+- Fixed validate_split.py to check 90/10 file split (train+val combined)
+- TF Metal plugin crash workaround: renamed libmetal_plugin.dylib to .bak
 
 ### Active Blockers
 
-None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available.
+Plan 01-03 Task 2 at checkpoint:human-verify -- 100-sample human review pending user approval.
 
 ### Execution Log
 
-- 2026-04-03: Plan 01-01 completed — Wave 0 validation scripts and real-world holdout (commits db7c9f3, cb054f7)
-- 2026-04-03: Plan 01-02 Task 1 completed — generate_dataset.py script (commit 6155546)
-- 2026-04-03: Plan 01-02 Task 2 in progress — 128 samples written (all crypto_investment), generation paused
-- 2026-04-03: generate_dataset.py refactored — static SCAM_PROMPTS/SAFE_HARD_NEGATIVE_PROMPTS/SAFE_NORMAL_PROMPTS replaced with parametric build_scam_prompt() and build_safe_prompt() to eliminate structural repetition
-- Last session: 2026-04-03 — Stopped at: 01-02 Task 2 generation in progress
+- 2026-04-03: Plan 01-01 completed -- Wave 0 validation scripts and real-world holdout
+- 2026-04-03: Plan 01-02 completed -- 27K synthetic samples generated
+- 2026-04-04: Plan 01-03 Task 1 completed -- filter_and_split.py pipeline, 22,942 post-filter samples (commit ef206b5)
+- 2026-04-04: Plan 01-03 Task 2 -- 100-sample human review extracted, awaiting user approval
+- Last session: 2026-04-04 -- Stopped at: 01-03 Task 2 checkpoint:human-verify

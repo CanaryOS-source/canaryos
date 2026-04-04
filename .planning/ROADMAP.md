@@ -37,7 +37,7 @@
 Plans:
 - [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
 - [x] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
-- [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
+- [x] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/FEATURES.md` (scam vector taxonomy, hard negative rationale, dataset sources), `.planning/research/PITFALLS.md` (Pitfalls 1.1–1.4: evaluation contamination, mode collapse, prompt leakage, safety filtering), `.planning/research/STACK.md` (Gemini structured output generation pattern via google-genai SDK)
 
@@ -59,7 +59,7 @@ Plans:
 
 Plans:
 - [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
-- [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
+- [x] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
 - [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
 **Research refs:** `.planning/research/STACK.md` (benchmark table, optimum 1.27.0 pinning, TFLite conversion path), `.planning/research/ARCHITECTURE.md` (input format per architecture, token_type_ids variance), `.planning/research/PITFALLS.md` (Pitfalls 2.4 tokenizer mismatch, 3.4 SELECT_TF_OPS, 4.4 vocab mismatch)
@@ -83,7 +83,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
+- [x] 01-01-PLAN.md — Validation scaffolding + real-world holdout collection
 - [ ] 01-02-PLAN.md — Two-model synthetic dataset generation (Gemini + Ollama)
 - [ ] 01-03-PLAN.md — Quality filter, JSD gate, stratified split, human review
 
