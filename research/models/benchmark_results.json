@@ -1,7 +1,7 @@
 {
   "benchmark_date": "2026-04-04",
-  "export_path_note": "D-02 deviation: Using TF direct path (PyTorch->TFAutoModel.from_pretrained(from_pt=True)->TFLiteConverter) instead of optimum==1.27.0 or ONNX->onnx2tf. Reason: optimum 2.1.0 removed TFLite export; onnx2tf fails with int64/int32 type mismatch on all 3 BERT-family models. TF direct path is functionally equivalent.",
-  "tflite_size_note": "tflite_size_mb values are from FP32 TF direct conversion, not INT8 QAT. Final INT8 model size will be determined in Phase 6 after quantization-aware training. Expect ~4x size reduction from FP32 to INT8.",
+  "export_path_note": "D-02 deviation: Using TF direct path (PyTorch->TFAutoModel.from_pretrained(from_pt=True)->TFLiteConverter) instead of optimum==1.27.0 or ONNX->onnx2tf. Reason: optimum 2.1.0 removed TFLite export; onnx2tf 2.3.9 fails with int64/int32 type mismatch on Slice op for all BERT-family position embeddings. TF direct path is functionally equivalent and produces standard TFLite ops.",
+  "tflite_size_note": "tflite_size_mb values are from default FP32 TF direct conversion, not INT8 QAT. Final INT8 model size will be determined in Phase 6 after quantization-aware training. Expect ~4x size reduction from FP32 to INT8.",
   "dataset": {
     "train_samples": 20648,
     "val_samples": 2294,
@@ -28,12 +28,12 @@
       "holdout_recall": 0.8148,
       "tflite_size_mb": 93.5,
       "tflite_size_is_fp32": true,
-      "tflite_latency_p50_ms": 65.2,
+      "tflite_latency_p50_ms": 65.0,
       "tflite_latency_p95_ms": 66.5,
       "tflite_ops": "builtin_only",
       "tflite_inputs": [
         {
-          "name": "input_ids",
+          "name": "serving_default_attention_mask:0",
           "shape": [
             1,
             128
@@ -41,7 +41,7 @@
           "dtype": "<class 'numpy.int32'>"
         },
         {
-          "name": "attention_mask",
+          "name": "serving_default_input_ids:0",
           "shape": [
             1,
             128
@@ -49,7 +49,7 @@
           "dtype": "<class 'numpy.int32'>"
         },
         {
-          "name": "token_type_ids",
+          "name": "serving_default_token_type_ids:0",
           "shape": [
             1,
             128
@@ -72,11 +72,11 @@
       "tflite_size_mb": 54.3,
       "tflite_size_is_fp32": true,
       "tflite_latency_p50_ms": 15.8,
-      "tflite_latency_p95_ms": 16.0,
+      "tflite_latency_p95_ms": 16.7,
       "tflite_ops": "builtin_only",
       "tflite_inputs": [
         {
-          "name": "input_ids",
+          "name": "serving_default_attention_mask:0",
           "shape": [
             1,
             128
@@ -84,7 +84,7 @@
           "dtype": "<class 'numpy.int32'>"
         },
         {
-          "name": "attention_mask",
+          "name": "serving_default_input_ids:0",
           "shape": [
             1,
             128
@@ -92,7 +92,7 @@
           "dtype": "<class 'numpy.int32'>"
         },
         {
-          "name": "token_type_ids",
+          "name": "serving_default_token_type_ids:0",
           "shape": [
             1,
             128
@@ -115,11 +115,11 @@
       "tflite_size_mb": 51.7,
       "tflite_size_is_fp32": true,
       "tflite_latency_p50_ms": 32.6,
-      "tflite_latency_p95_ms": 32.8,
+      "tflite_latency_p95_ms": 32.9,
       "tflite_ops": "builtin_only",
       "tflite_inputs": [
         {
-          "name": "input_ids",
+          "name": "serving_default_attention_mask:0",
           "shape": [
             1,
             128
@@ -127,7 +127,7 @@
           "dtype": "<class 'numpy.int32'>"
         },
         {
-          "name": "attention_mask",
+          "name": "serving_default_input_ids:0",
           "shape": [
             1,
             128
@@ -135,7 +135,7 @@
           "dtype": "<class 'numpy.int32'>"
         },
         {
-          "name": "token_type_ids",
+          "name": "serving_default_token_type_ids:0",
           "shape": [
             1,
             128
@@ -151,7 +151,7 @@
   "winner": {
     "name": "MobileBERT",
     "model_id": "google/mobilebert-uncased",
-    "rationale": "MobileBERT selected as student architecture. Holdout F1: 0.7719 (primary metric per D-07). TFLite FP32 size: 93.5 MB (pre-QAT; INT8 expected ~23.4 MB). Desktop latency: p50=65.2ms, p95=66.5ms. Runner-up: ELECTRA-small (F1=0.7289, size=51.7MB, latency p50=32.6ms).",
+    "rationale": "MobileBERT selected as student architecture. Holdout F1: 0.7719 (primary metric per D-07). TFLite FP32 size: 93.5 MB (note: this is pre-QAT FP32; final INT8 size determined in Phase 6, expected ~23.4 MB). Desktop latency: p50=65.0ms, p95=66.5ms. Runner-up: ELECTRA-small (F1=0.7289, size=51.7MB FP32, latency p50=32.6ms).",
     "binary_baseline_f1": 0.7719
   },
   "excluded": [
