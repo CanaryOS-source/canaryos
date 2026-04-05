@@ -2,24 +2,24 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: complete
-last_updated: "2026-04-04T23:30:00.000Z"
-last_activity: 2026-04-04 -- Phase 03 complete, gates passed
+status: executing
+last_updated: "2026-04-05T04:14:56.645Z"
+last_activity: 2026-04-05
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 3 complete — ready for Phase 4
-Plan: 2/2 complete
-Status: Phase 3 complete — teacher gates passed (holdout F1=0.8052, synthetic F1=0.9990)
-Last activity: 2026-04-04 -- Phase 03 complete
+Phase: 04 (knowledge-distillation) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-05 -- Plan 04-01 complete, Phase A notebook ready for Colab
 
 ## Milestone
 
@@ -33,7 +33,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 | 1. Data Foundation | In progress (Plan 3/3 at checkpoint) |
 | 2. Architecture Benchmark | Plan 02-02 checkpoint pending |
 | 3. Teacher Fine-Tuning | Not started |
-| 4. Knowledge Distillation | Not started |
+| 4. Knowledge Distillation | Plan 1/2 complete (04-01 notebook created) |
 | 5. Multi-Label Intent Head | Not started |
 | 6. QAT + TFLite Deployment | Not started |
 
@@ -142,3 +142,8 @@ None — all Phase 1 plans complete, human review approved.
 - Teacher checkpoint saved: 1663.67 MB on Google Drive
 - Weakest vectors: safe (F1=0.68), phishing (F1=0.71) -- expected given holdout composition
 - 2026-04-04: Plan 03-02 checkpoint APPROVED -- teacher gates passed, soft labels ready for Phase 4
+- 2026-04-05: Plan 04-01 completed -- distillation notebook Cells 0-10 (commits 24e3b54, 12428cb)
+- Decision: 1:1 layer mapping at 512-dim inter-block with 24 learnable linear projections (1024->512)
+- Decision: Mean-pool attention grouping (16->4 heads) using KL divergence
+- Decision: Custom training loop (not HF Trainer) for multi-component distillation loss
+- Decision: beta=100.0 for hidden state MSE scale-up to match KL magnitude

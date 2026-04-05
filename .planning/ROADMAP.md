@@ -104,7 +104,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Create distillation notebook: setup, memory profiling, data/model loading, DistillationWrapper, Phase A soft-labels-only training + evaluation
+- [x] 04-01-PLAN.md — Create distillation notebook: setup, memory profiling, data/model loading, DistillationWrapper, Phase A soft-labels-only training + evaluation
 - [ ] 04-02-PLAN.md — Phase B intermediate layer training, temperature sweep, gate check, checkpoint save, Colab verification
 
 **Research refs:** `.planning/research/SUMMARY.md` (intermediate layer distillation rationale, 3-5 F1 gain estimate, layer mapping gap), `.planning/research/FEATURES.md` (Step 4: distillation loss formula, temperature guidance), `.planning/research/PITFALLS.md` (Pitfall 2.1: teacher gate, Pitfall 2.2: temperature calibration, Pitfall 2.3: architecture mismatch for intermediate layers)
