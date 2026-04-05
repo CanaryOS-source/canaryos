@@ -11,7 +11,7 @@
 
 - [ ] **Phase 1: Data Foundation** — Build real-world holdout set and generate synthetic training dataset
 - [x] **Phase 2: Architecture Benchmark** — Validate student architecture selection with binary baseline (completed 2026-04-04)
-- [ ] **Phase 3: Teacher Fine-Tuning** — Fine-tune DeBERTa-v3-large server-side to F1 > 0.95 gate
+- [x] **Phase 3: Teacher Fine-Tuning** — Fine-tune DeBERTa-v3-large server-side to F1 > 0.95 gate (completed 2026-04-04)
 - [ ] **Phase 4: Knowledge Distillation** — Distill teacher accuracy into TinyBERT-4 student via intermediate layer transfer
 - [ ] **Phase 5: Multi-Label Intent Head** — Add 8 sigmoid heads to the stable binary classifier
 - [ ] **Phase 6: QAT + TFLite Deployment** — Quantize, export, validate, and deploy to canaryapp
@@ -83,7 +83,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Create teacher fine-tuning notebook (DualHead DeBERTa-v3-large, training pipeline, evaluation, ECE calibration, soft label pre-computation)
-- [ ] 03-02-PLAN.md — Verify training results meet Phase 3 gate (user runs notebook in Colab, confirms F1 > 0.80 holdout)
+- [x] 03-02-PLAN.md — Verify training results meet Phase 3 gate (user runs notebook in Colab, confirms F1 > 0.80 holdout)
 
 **Research refs:** `.planning/research/FEATURES.md` (Step 3: DeBERTa-v3-large rationale, F1 > 0.95 target), `.planning/research/SUMMARY.md` (teacher fine-tune phase note, GPU requirement flag), `.planning/research/PITFALLS.md` (Pitfall 2.1: teacher inherits generalization problem, Pitfall 2.2: over-confident teacher soft labels), `.planning/research/STACK.md` (DeBERTa-v3 PyTorch-only note — dual framework implication)
 
@@ -166,7 +166,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 3/3 | Complete |  |
 | 2. Architecture Benchmark | 2/2 | Complete   | 2026-04-04 |
-| 3. Teacher Fine-Tuning | 0/2 | Planned | - |
+| 3. Teacher Fine-Tuning | 2/2 | Complete | 2026-04-04 |
 | 4. Knowledge Distillation | 0/0 | Not started | - |
 | 5. Multi-Label Intent Head | 0/0 | Not started | - |
 | 6. QAT + TFLite Deployment | 0/0 | Not started | - |

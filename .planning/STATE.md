@@ -2,24 +2,24 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-04T21:14:13.268Z"
-last_activity: 2026-04-04 -- Phase 03 execution started
+status: complete
+last_updated: "2026-04-04T23:30:00.000Z"
+last_activity: 2026-04-04 -- Phase 03 complete, gates passed
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 7
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 03 (teacher-fine-tuning) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 03
-Last activity: 2026-04-04 -- Phase 03 execution started
+Phase: 3 complete — ready for Phase 4
+Plan: 2/2 complete
+Status: Phase 3 complete — teacher gates passed (holdout F1=0.8052, synthetic F1=0.9990)
+Last activity: 2026-04-04 -- Phase 03 complete
 
 ## Milestone
 
@@ -54,7 +54,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 ### Key Architectural Decisions (Locked)
 
 - Student model: MobileBERT (`google/mobilebert-uncased`) -- 24.6M params, ~23MB INT8 est., 65ms desktop TFLite. UPDATED from TinyBERT-4 per Phase 2 benchmark results (MobileBERT F1=0.7719 vs TinyBERT F1=0.7059)
-- Teacher model: microsoft/deberta-v3-large (435M params) — better GLUE than RoBERTa, disentangled attention helps short texts
+- Teacher model: microsoft/deberta-v3-large (435M params) — TRAINED: holdout F1=0.8052, synthetic F1=0.9990, ECE=0.0005. Soft labels at T={2,3,4,5} on Google Drive. Training config: T4_CONFIG (3 epochs) + RETRY_1 (2 more epochs at 3e-6 LR)
 - Tokenizer: BERT WordPiece, 30,522 vocab — same as existing `vocab.txt`; no change to `TextTokenizer.ts`
 - Distillation: Intermediate layer transfer (attention matrix + hidden states) + soft labels — NOT soft-labels-only
 - Quantization: QAT via TFMOT (TF 2.15/2.16) — PTQ explicitly prohibited for BERT family
@@ -125,3 +125,20 @@ None — all Phase 1 plans complete, human review approved.
 - Decision: All 3 models pass standard LiteRT without SELECT_TF_OPS -- no disqualifications
 - 2026-04-04: Task 3 checkpoint APPROVED -- user chose MobileBERT, prioritizing model capability (F1=0.7719) over size concerns (~23MB INT8 est. vs 20MB hard reject). Size to be addressed in Phase 6 QAT.
 - Decision: MobileBERT INT8 size concern acknowledged but deprioritized by user in favor of classification capability
+- 2026-04-04: Plan 03-01 notebook created, user running in Colab via VS Code remote
+- Fix: total_mem -> total_memory (PyTorch CUDA API)
+- Fix: _can_set_experts_implementation override (transformers MoE check fails in Jupyter __main__)
+- Fix: evaluation_strategy -> eval_strategy (transformers v5 rename)
+- Fix: max_grad_norm=0.0 (fp16 GradScaler conflicts with accelerate clip_grad_norm_)
+- Fix: DeBERTa-v3 LayerNorm gamma/beta -> weight/bias key mismatch -- from_pretrained fails to remap in newer transformers. Solution: load DebertaV2Model.from_pretrained separately, then assign to custom model. First training run failed (F1=0.0, val_loss=NaN) because LayerNorm weights were random.
+- Fix: DATA_DIR changed from relative research/data/ to Google Drive /content/drive/MyDrive/canaryos_teacher/data/ (Colab VM can't see local filesystem)
+- 2026-04-04: Plan 03-01 training completed in Colab (T4 GPU)
+- T4_CONFIG: 3 epochs, F1=0.7926 holdout (below 0.80 gate)
+- RETRY_1: 2 more epochs at 3e-6 LR, continued from trained model, F1=0.8052 holdout -- GATE PASSED
+- Synthetic F1: 0.9990 (gate: >0.95) -- PASSED
+- Holdout F1: 0.8052 (gate: >0.80) -- PASSED
+- ECE before: 0.0014, after calibration (T=0.5): 0.0005
+- Soft labels: 4 files saved at T={2,3,4,5} on Google Drive, 0.70 MB each
+- Teacher checkpoint saved: 1663.67 MB on Google Drive
+- Weakest vectors: safe (F1=0.68), phishing (F1=0.71) -- expected given holdout composition
+- 2026-04-04: Plan 03-02 checkpoint APPROVED -- teacher gates passed, soft labels ready for Phase 4
