@@ -18,8 +18,8 @@ progress:
 
 Phase: 04 (knowledge-distillation) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-04-05 -- Plan 04-01 complete, Phase A notebook ready for Colab
+Status: Checkpoint pending (human-verify: user runs notebook in Colab)
+Last activity: 2026-04-05 -- Plan 04-02 Task 1 complete, Task 2 human-verify checkpoint pending
 
 ## Milestone
 
@@ -33,7 +33,7 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 | 1. Data Foundation | In progress (Plan 3/3 at checkpoint) |
 | 2. Architecture Benchmark | Plan 02-02 checkpoint pending |
 | 3. Teacher Fine-Tuning | Not started |
-| 4. Knowledge Distillation | Plan 1/2 complete (04-01 notebook created) |
+| 4. Knowledge Distillation | Plan 2/2 Task 1 complete, Task 2 checkpoint pending |
 | 5. Multi-Label Intent Head | Not started |
 | 6. QAT + TFLite Deployment | Not started |
 
@@ -147,3 +147,9 @@ None — all Phase 1 plans complete, human review approved.
 - Decision: Mean-pool attention grouping (16->4 heads) using KL divergence
 - Decision: Custom training loop (not HF Trainer) for multi-component distillation loss
 - Decision: beta=100.0 for hidden state MSE scale-up to match KL magnitude
+- 2026-04-05: Plan 04-02 Task 1 completed -- Cells 11-16 added (commit ca81b68)
+- Decision: Phase B uses 0.5x Phase A LR for stability when adding intermediate losses
+- Decision: Configurable use_attention_loss flag per RESEARCH.md Pitfall 3 (DeBERTa attention fallback)
+- Decision: Temperature sweep trains each T from same Phase A base (not sequential) for independence
+- Decision: D-06 recovery includes relaxed 2-point gate option and headroom analysis
+- Checkpoint: Task 2 human-verify -- user must run notebook in Colab and report results
