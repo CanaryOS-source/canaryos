@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-03T02:22:26.434Z"
-last_activity: 2026-04-03
+last_updated: "2026-04-06T21:46:09.956Z"
+last_activity: 2026-04-06
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -17,9 +17,9 @@ progress:
 ## Current Position
 
 Phase: 01 (data-foundation) — EXECUTING
-Plan: 2 of 3
-Status: Executing — generation script running (128 samples written, ~26,872 remaining)
-Last activity: 2026-04-03
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-04-06
 
 ## Milestone
 
@@ -94,6 +94,13 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - Script is resumable: loads existing synthetic_raw.jsonl and fills remaining per-vector gaps
 - **Replaced static template cycling with parametric prompt builder** — root cause of observed structural repetition in first 128 samples was cycling 5-8 fixed templates hundreds of times. `build_scam_prompt()` and `build_safe_prompt()` each sample from 7 independent parameter spaces (sub-variant × register × length × emotional angle × sender persona × cultural context × channel), producing millions of unique combinations per vector. Scam: 12 sub-variants × 12 registers × 5 emotional angles × 8 personas × 16 contexts. Safe: 35 transactional variants + 6 hard-neg categories × 8 variants each. Existing 128 samples preserved (valid data; dedup filter in Phase 3 handles any exact duplicates).
 
+### Plan SWD-01 Decisions
+
+- Asset access via Gradle sourceSets: config plugin adds assets/models/ as Android assets srcDir for native vocab/model access
+- Lazy classifier init: model loads on first classify() call, returns safe verdict (isScam=false) on failure to prevent false positives
+- canary-shield Expo local module at canaryapp/modules/canary-shield/ with expo-module.config.json registration
+- Tokenizer parity validated via JS fixture generation (20 test strings) + Kotlin JUnit test
+
 ### Active Blockers
 
 None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available.
@@ -104,4 +111,5 @@ None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available
 - 2026-04-03: Plan 01-02 Task 1 completed — generate_dataset.py script (commit 6155546)
 - 2026-04-03: Plan 01-02 Task 2 in progress — 128 samples written (all crypto_investment), generation paused
 - 2026-04-03: generate_dataset.py refactored — static SCAM_PROMPTS/SAFE_HARD_NEGATIVE_PROMPTS/SAFE_NORMAL_PROMPTS replaced with parametric build_scam_prompt() and build_safe_prompt() to eliminate structural repetition
-- Last session: 2026-04-03 — Stopped at: 01-02 Task 2 generation in progress
+- 2026-04-06: Plan SWD-01 completed — canary-shield Expo local module scaffold with Kotlin BertTokenizer, TFLite ScamClassifier, config plugin, and tokenizer parity test (commits 09512a5, de5f34e, 6941bf9, a4e4e33)
+- Last session: 2026-04-06 — Stopped at: Completed SWD-01-PLAN.md
