@@ -58,6 +58,7 @@ module.exports = {
           },
         },
       ],
+      './modules/canary-shield/app.plugin.js',
     ],
     experiments: {
       typedRoutes: true,

@@ -1,0 +1,61 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+group = 'com.canaryos.shield'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project.rootProject.projectDir.parentFile, "node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle")
+if (expoModulesCorePlugin.exists()) {
+  apply from: expoModulesCorePlugin
+  applyKotlinExpoModulesCorePlugin()
+}
+
+buildscript {
+  def expoModulesCorePlugin = new File(project.rootProject.projectDir.parentFile, "node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle")
+  if (expoModulesCorePlugin.exists()) {
+    apply from: expoModulesCorePlugin
+    applyKotlinExpoModulesCorePlugin()
+  }
+}
+
+android {
+  namespace 'com.canaryos.shield'
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    targetSdkVersion safeExtGet("targetSdkVersion", 35)
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = '17'
+  }
+
+  sourceSets {
+    main {
+      java.srcDirs = ['src/main/kotlin']
+    }
+    test {
+      java.srcDirs = ['src/test/kotlin']
+      resources.srcDirs = ['src/test/resources']
+    }
+  }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+  implementation 'org.tensorflow:tensorflow-lite:2.16.1'
+  implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.json:json:20231013'
+}
+
+def safeExtGet(prop, fallback) {
+  rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}

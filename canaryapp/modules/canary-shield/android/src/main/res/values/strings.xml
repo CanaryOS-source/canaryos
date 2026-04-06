@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">CanaryOS monitors visible screen text across apps to detect potential scam and fraud content in real time. All analysis runs on-device; no screen content is sent to any server.</string>
+</resources>
