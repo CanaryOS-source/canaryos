@@ -1,6 +1,5 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 
 group = 'com.canaryos.shield'
 version = '0.1.0'
@@ -11,20 +10,13 @@ if (expoModulesCorePlugin.exists()) {
   applyKotlinExpoModulesCorePlugin()
 }
 
-buildscript {
-  def expoModulesCorePlugin = new File(project.rootProject.projectDir.parentFile, "node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle")
-  if (expoModulesCorePlugin.exists()) {
-    apply from: expoModulesCorePlugin
-    applyKotlinExpoModulesCorePlugin()
-  }
-}
-
 android {
   namespace 'com.canaryos.shield'
+  compileSdk safeExtGet("compileSdkVersion", 36)
 
   defaultConfig {
     minSdkVersion safeExtGet("minSdkVersion", 24)
-    targetSdkVersion safeExtGet("targetSdkVersion", 35)
+    targetSdkVersion safeExtGet("targetSdkVersion", 36)
   }
 
   compileOptions {
@@ -55,13 +47,15 @@ android {
 
 dependencies {
   implementation project(':expo-modules-core')
-  implementation 'org.tensorflow:tensorflow-lite:2.16.1'
-  implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
+  // Use the LiteRT (rebranded TFLite) already provided by react-native-fast-tflite
+  // to avoid duplicate class conflicts. The Java API is identical (org.tensorflow.lite.*)
+  compileOnly 'com.google.ai.edge.litert:litert:1.0.1'
 
   testImplementation 'junit:junit:4.13.2'
   testImplementation 'org.json:json:20231013'
   testImplementation 'org.robolectric:robolectric:4.11.1'
   testImplementation 'androidx.test:core:1.5.0'
+  testImplementation 'com.google.ai.edge.litert:litert:1.0.1'
 }
 
 def safeExtGet(prop, fallback) {
