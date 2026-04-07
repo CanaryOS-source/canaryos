@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-04-07T03:17:02Z"
+status: verifying
+last_updated: "2026-04-07T03:25:24.495Z"
 last_activity: 2026-04-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 3
+  completed_plans: 2
 ---
 
 # Project State
@@ -18,8 +18,8 @@ progress:
 
 Phase: 01 (data-foundation) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-04-06
+Status: Phase complete — ready for verification
+Last activity: 2026-04-07
 
 ## Milestone
 
@@ -109,6 +109,15 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - ScreenTextExtractor unit tests deferred to SWD-03 integration (AccessibilityNodeInfo is final/sealed)
 - ContentChangeDetector constructor accepts configurable cooldowns/buffer size for testing
 
+### Plan SWD-03 Decisions
+
+- SharedPreferences as IPC channel between accessibility service and RN bridge (service reads config, bridge writes config)
+- Heartbeat health monitor: service writes timestamp every 30s, bridge checks staleness > 60s via isServiceAlive()
+- Static companion on CanaryAccessibilityService for lastDetection (AtomicReference) and detectionStats — required because Android manages service lifecycle independently
+- Separate SharedPreferences file for stats (canary_shield_stats) vs config (canary_shield_prefs) to avoid write contention
+- DetectionStats ring buffer keeps recent detections across day boundaries; only daily counters reset
+- Task 4 (health monitor) integrated into Tasks 1+3 since heartbeat writer and isServiceAlive() are tightly coupled to service and bridge
+
 ### Active Blockers
 
 None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available.
@@ -121,4 +130,5 @@ None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available
 - 2026-04-03: generate_dataset.py refactored — static SCAM_PROMPTS/SAFE_HARD_NEGATIVE_PROMPTS/SAFE_NORMAL_PROMPTS replaced with parametric build_scam_prompt() and build_safe_prompt() to eliminate structural repetition
 - 2026-04-06: Plan SWD-01 completed — canary-shield Expo local module scaffold with Kotlin BertTokenizer, TFLite ScamClassifier, config plugin, and tokenizer parity test (commits 09512a5, de5f34e, 6941bf9, a4e4e33)
 - 2026-04-07: Plan SWD-02 completed — ScreenTextExtractor, ContentChangeDetector, AppExclusionList with 20 unit tests (commits 45d8b62, dd7880b, 576e0a2, f1e8c3b)
-- Last session: 2026-04-07 — Stopped at: Completed SWD-02-PLAN.md
+- 2026-04-07: Plan SWD-03 completed — CanaryAccessibilityService pipeline, DetectionStats ring buffer, expanded bridge API (15 functions), heartbeat health monitor (commits 4f014e5, 960f3b7, 434e41c)
+- Last session: 2026-04-07 — Stopped at: Completed SWD-03-PLAN.md
