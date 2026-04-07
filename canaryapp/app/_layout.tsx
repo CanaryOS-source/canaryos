@@ -38,6 +38,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="shield-setup" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/shield" options={{ title: 'Shield Settings', headerShown: true }} />
         <Stack.Screen name="family" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
