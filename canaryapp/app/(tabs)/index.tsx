@@ -13,6 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { analyzeImageForScam, analyzeTextForScam, analyzeAudioForScam, ScamAnalysisResult } from '@/services/scamAnalyzer';
@@ -28,6 +30,13 @@ import {
   OnDeviceAnalysisResult,
 } from '@/services/ondevice';
 import { classifyWithModel } from '@/services/ondevice/TextClassifierService';
+
+// Conditionally import canary-shield (Android only)
+const CanaryShield = Platform.OS === 'android'
+  ? require('@/modules/canary-shield')
+  : null;
+
+const SHIELD_SETUP_KEY = 'shield_setup_complete';
 
 export default function HomeScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -46,7 +55,12 @@ export default function HomeScreen() {
   const [debugText, setDebugText] = useState<string>('');
   const [debugModelScore, setDebugModelScore] = useState<number | null>(null);
   const [debugTesting, setDebugTesting] = useState(false);
-  
+
+  // Shield status state
+  const [shieldActive, setShieldActive] = useState(false);
+  const [showSetupPrompt, setShowSetupPrompt] = useState(false);
+  const router = useRouter();
+
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { user } = useAuth();
@@ -77,6 +91,44 @@ export default function HomeScreen() {
     };
 
     initOnDevice();
+  }, []);
+
+  // Check shield status and first-time setup prompt
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const checkShieldStatus = async () => {
+      // Check if shield setup was completed
+      try {
+        const setupDone = await AsyncStorage.getItem(SHIELD_SETUP_KEY);
+        if (!setupDone) {
+          setShowSetupPrompt(true);
+        }
+      } catch {
+        // Non-critical
+      }
+
+      // Check if accessibility service is alive
+      if (CanaryShield) {
+        try {
+          const alive = CanaryShield.isServiceAlive();
+          setShieldActive(alive);
+        } catch {
+          setShieldActive(false);
+        }
+      }
+    };
+
+    checkShieldStatus();
+  }, []);
+
+  const dismissSetupPrompt = useCallback(async () => {
+    setShowSetupPrompt(false);
+    try {
+      await AsyncStorage.setItem(SHIELD_SETUP_KEY, 'dismissed');
+    } catch {
+      // Non-critical
+    }
   }, []);
 
   const pickImage = async () => {
@@ -358,6 +410,54 @@ export default function HomeScreen() {
           Scam Detection
         </Text>
       </View>
+
+      {/* Shield Status Indicator (Android only) */}
+      {Platform.OS === 'android' && (
+        <TouchableOpacity
+          style={styles.shieldStatus}
+          onPress={() => router.push('/settings/shield')}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[
+              styles.shieldDot,
+              { backgroundColor: shieldActive ? CanaryColors.trustBlue : '#888' },
+            ]}
+          />
+          <Text style={[styles.shieldStatusText, { color: colors.icon }]}>
+            Shield: {shieldActive ? 'Active' : 'Inactive'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* First-time Shield Setup Prompt */}
+      {showSetupPrompt && Platform.OS === 'android' && (
+        <View style={[styles.setupCard, { backgroundColor: colors.card }]}>
+          <Text style={[styles.setupCardTitle, { color: colors.text }]}>
+            Protect your entire phone from scams
+          </Text>
+          <Text style={[styles.setupCardBody, { color: colors.icon }]}>
+            Enable system-wide protection to detect scams across all apps.
+          </Text>
+          <View style={styles.setupCardActions}>
+            <TouchableOpacity
+              style={[styles.setupCardButton, { backgroundColor: CanaryColors.primary }]}
+              onPress={() => router.push('/shield-setup')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.setupCardButtonText}>Set up Shield</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={dismissSetupPrompt}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.setupCardDismiss, { color: colors.icon }]}>
+                Not now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Main Action Buttons */}
       {!selectedImage && !selectedAudio && !analysis && !onDeviceAnalysis && (
@@ -972,5 +1072,56 @@ const styles = StyleSheet.create({
   debugResultPercent: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  shieldStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  shieldDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  shieldStatusText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  setupCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  setupCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  setupCardBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  setupCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  setupCardButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  setupCardButtonText: {
+    color: '#1C1C1C',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  setupCardDismiss: {
+    fontSize: 14,
   },
 });

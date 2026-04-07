@@ -10,6 +10,7 @@ import {
   Platform,
   useColorScheme,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { Colors, CanaryColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +19,7 @@ import { signOut, deleteAccount } from '@/services/firebase';
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { user, userData } = useAuth();
@@ -205,6 +207,27 @@ export default function SettingsScreen() {
           </View>
         )}
       </View>
+
+      {/* Shield Settings (Android only) */}
+      {Platform.OS === 'android' && (
+        <TouchableOpacity
+          style={[styles.section, { backgroundColor: colors.card }]}
+          onPress={() => router.push('/settings/shield')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, { color: colors.text }]}>
+                Shield Protection
+              </Text>
+              <Text style={[styles.settingDescription, { color: colors.icon }]}>
+                System-wide scam detection settings
+              </Text>
+            </View>
+            <Text style={[{ color: colors.icon, fontSize: 18 }]}>{'>'}</Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Account Section */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
