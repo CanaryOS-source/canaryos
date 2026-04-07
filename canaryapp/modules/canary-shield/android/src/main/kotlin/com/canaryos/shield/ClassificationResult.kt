@@ -23,3 +23,18 @@ data class ServiceStatus(
     val modelLoaded: Boolean,
     val vocabLoaded: Boolean
 )
+
+/**
+ * A single scam detection event for stats and bridge retrieval.
+ *
+ * @property timestamp Epoch millis when the detection occurred
+ * @property appPackage Package name of the app where scam content was found
+ * @property confidence Model confidence score (0.0 to 1.0)
+ * @property snippetPreview First 100 characters of the classified text
+ */
+data class DetectionEntry(
+    val timestamp: Long,
+    val appPackage: String,
+    val confidence: Float,
+    val snippetPreview: String
+)
