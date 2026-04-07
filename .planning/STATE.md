@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-06T21:46:09.956Z"
-last_activity: 2026-04-06
+last_updated: "2026-04-07T03:17:02Z"
+last_activity: 2026-04-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -101,6 +101,14 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - canary-shield Expo local module at canaryapp/modules/canary-shield/ with expo-module.config.json registration
 - Tokenizer parity validated via JS fixture generation (20 test strings) + Kotlin JUnit test
 
+### Plan SWD-02 Decisions
+
+- ScreenTextExtractor as object singleton: stateless utility, caller retains root node ownership, children recycled in finally blocks
+- ContentChangeDetector uses @Synchronized over AtomicInteger: multiple mutable fields need atomic update together
+- Robolectric 4.11.1 added for AppExclusionList tests (Context/SharedPreferences in JVM)
+- ScreenTextExtractor unit tests deferred to SWD-03 integration (AccessibilityNodeInfo is final/sealed)
+- ContentChangeDetector constructor accepts configurable cooldowns/buffer size for testing
+
 ### Active Blockers
 
 None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available.
@@ -112,4 +120,5 @@ None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available
 - 2026-04-03: Plan 01-02 Task 2 in progress — 128 samples written (all crypto_investment), generation paused
 - 2026-04-03: generate_dataset.py refactored — static SCAM_PROMPTS/SAFE_HARD_NEGATIVE_PROMPTS/SAFE_NORMAL_PROMPTS replaced with parametric build_scam_prompt() and build_safe_prompt() to eliminate structural repetition
 - 2026-04-06: Plan SWD-01 completed — canary-shield Expo local module scaffold with Kotlin BertTokenizer, TFLite ScamClassifier, config plugin, and tokenizer parity test (commits 09512a5, de5f34e, 6941bf9, a4e4e33)
-- Last session: 2026-04-06 — Stopped at: Completed SWD-01-PLAN.md
+- 2026-04-07: Plan SWD-02 completed — ScreenTextExtractor, ContentChangeDetector, AppExclusionList with 20 unit tests (commits 45d8b62, dd7880b, 576e0a2, f1e8c3b)
+- Last session: 2026-04-07 — Stopped at: Completed SWD-02-PLAN.md
