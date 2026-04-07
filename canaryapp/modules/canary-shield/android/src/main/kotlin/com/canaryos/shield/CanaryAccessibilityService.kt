@@ -61,6 +61,9 @@ class CanaryAccessibilityService : AccessibilityService() {
     private var prefs: SharedPreferences? = null
     private var heartbeatHandler: Handler? = null
     private var heartbeatRunnable: Runnable? = null
+    private var overlayManager: OverlayManager? = null
+    private var notificationHelper: NotificationHelper? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         try {
@@ -87,6 +90,10 @@ class CanaryAccessibilityService : AccessibilityService() {
             appExclusionList = AppExclusionList(this)
             detectionStats = DetectionStats(this)
             executor = Executors.newSingleThreadExecutor()
+
+            // Initialize overlay and notification
+            notificationHelper = NotificationHelper(this)
+            overlayManager = OverlayManager(this, notificationHelper!!)
 
             // Register prefs listener for config updates
             prefs?.registerOnSharedPreferenceChangeListener(prefsListener)
@@ -158,6 +165,14 @@ class CanaryAccessibilityService : AccessibilityService() {
                         lastDetection.set(entry)
                         currentStats.recordDetection(entry)
 
+                        // Show overlay warning on main thread (falls back to notification)
+                        val currentOverlay = overlayManager
+                        if (currentOverlay != null) {
+                            mainHandler.post {
+                                currentOverlay.showWarning(result)
+                            }
+                        }
+
                         Log.w(
                             TAG,
                             "Scam detected: package=$capturedPackage, " +
@@ -189,6 +204,11 @@ class CanaryAccessibilityService : AccessibilityService() {
 
             // Stop heartbeat
             stopHeartbeat()
+
+            // Destroy overlay (remove view from WindowManager)
+            overlayManager?.destroy()
+            overlayManager = null
+            notificationHelper = null
 
             // Unregister prefs listener
             prefs?.unregisterOnSharedPreferenceChangeListener(prefsListener)
