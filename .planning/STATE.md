@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-last_updated: "2026-04-07T03:25:24.495Z"
+last_updated: "2026-04-07T21:10:34.490Z"
 last_activity: 2026-04-07
 progress:
   total_phases: 6
@@ -118,6 +118,21 @@ Goal: Replace broken MobileBERT model with a research-backed, synthetically-trai
 - DetectionStats ring buffer keeps recent detections across day boundaries; only daily counters reset
 - Task 4 (health monitor) integrated into Tasks 1+3 since heartbeat writer and isServiceAlive() are tightly coupled to service and bridge
 
+### Plan SWD-04 Decisions
+
+- OverlayManager receives NotificationHelper via constructor for clean fallback delegation
+- Rate-limit (10s) and dedup (30s content-hash) are separate concerns in OverlayManager vs NotificationHelper
+- Haptic feedback uses VibratorManager on Android 12+ with legacy Vibrator fallback
+- Overlay destroyed before executor shutdown in onDestroy to prevent BadTokenException
+
+### Plan SWD-05 Decisions
+
+- Conditional require() for canary-shield module gated on Platform.OS === 'android' to prevent import errors on iOS/web
+- AsyncStorage for shield_setup_complete flag: 'true' for completed, 'dismissed' for user-dismissed prompt
+- Custom ThresholdSlider component built instead of adding @react-native-community/slider dependency
+- Shield settings registered as Stack screen (settings/shield) rather than nested tab to keep tab structure clean
+- @react-native-async-storage/async-storage added as project dependency
+
 ### Active Blockers
 
 None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available.
@@ -131,4 +146,6 @@ None — GEMINI_API_KEY confirmed set, llama3.1:8b pulled and verified available
 - 2026-04-06: Plan SWD-01 completed — canary-shield Expo local module scaffold with Kotlin BertTokenizer, TFLite ScamClassifier, config plugin, and tokenizer parity test (commits 09512a5, de5f34e, 6941bf9, a4e4e33)
 - 2026-04-07: Plan SWD-02 completed — ScreenTextExtractor, ContentChangeDetector, AppExclusionList with 20 unit tests (commits 45d8b62, dd7880b, 576e0a2, f1e8c3b)
 - 2026-04-07: Plan SWD-03 completed — CanaryAccessibilityService pipeline, DetectionStats ring buffer, expanded bridge API (15 functions), heartbeat health monitor (commits 4f014e5, 960f3b7, 434e41c)
-- Last session: 2026-04-07 — Stopped at: Completed SWD-03-PLAN.md
+- 2026-04-07: Plan SWD-04 completed — OverlayManager, NotificationHelper, wired into CanaryAccessibilityService (commits d5e1af3, 714de63, 92583f6, 9e0e309)
+- 2026-04-07: Plan SWD-05 completed — Permission onboarding wizard, shield settings screen, navigation integration with status indicator and setup prompt (commits 326db2e, c489698, 9518235)
+- Last session: 2026-04-07 — Stopped at: Completed SWD-05-PLAN.md
